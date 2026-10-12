@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Strings &amp; Arrays — Java Academy</title>
+  <meta name="description" content="Java&#x27;s String API, immutability, string comparison, StringBuilder, text blocks and formatting, characters, arrays, java.util.Arrays and 2-D arrays.">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="assets/css/main.css?v=__BUILD__">
+  <script>try{var t=localStorage.getItem("ja-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body data-page="strings-arrays">
+  <div id="site-header"></div>
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+      <div class="content-inner">
+
+        <header class="page-hero">
+          <nav class="crumbs"><a href="index.html">Home</a><span>/</span><span>Java Fundamentals</span><span>/</span><span>Lesson 06</span></nav>
+          <div class="eyebrow">Lesson 06 · Java Fundamentals</div>
+          <h1>Strings &amp; Arrays</h1>
+          <p class="lead">Text and fixed-size lists of values appear in every program. Learn the String API inside out, why strings are immutable, when to reach for <code>StringBuilder</code>, modern text blocks, and how arrays work in memory.</p>
+          <div class="page-meta"><span>⏱ 55 min</span><span>🎯 Beginner</span><span>🧩 Prerequisite: lesson 05</span></div>
+          <div class="objectives">
+            <h4>You will be able to</h4>
+            <ul>
+              <li>Use the most important <code>String</code> methods</li>
+              <li>Compare strings correctly</li>
+              <li>Build strings efficiently with <code>StringBuilder</code></li>
+              <li>Write multi-line text with text blocks</li>
+              <li>Create, loop over and copy arrays</li>
+              <li>Use <code>java.util.Arrays</code> and 2-D arrays</li>
+            </ul>
+          </div>
+        </header>
+
+        <section class="doc-section" id="string-api" data-title="The String API">
+          <div class="sec-head"><h2><span class="sec-num">6.1</span>The String API</h2></div>
+          <p>A <code>String</code> is a sequence of characters, indexed from <b>0</b>. Strings are objects with dozens of useful methods; here are the ones you'll use daily:</p>
+          <script type="text/plain" data-code="java" data-file="StringApi.java" data-run>
+            public class StringApi {
+                public static void main(String[] args) {
+                    String s = "  Hello, Android Studio!  ";
+                    String t = s.strip();                       // remove surrounding whitespace
+                    System.out.println("[" + t + "] length " + t.length());
+                    System.out.println(t.charAt(0) + " " + t.charAt(t.length() - 1));
+                    System.out.println(t.substring(7));         // from index 7 to the end
+                    System.out.println(t.substring(7, 14));     // [7, 14) — end is exclusive
+                    System.out.println(t.indexOf("Studio") + " " + t.indexOf('z'));
+                    System.out.println(t.contains("Android") + " " + t.startsWith("Hell") + " " + t.endsWith("!"));
+                    System.out.println(t.toUpperCase() + " / " + t.toLowerCase());
+                    System.out.println(t.replace("Studio", "Developer"));
+                    System.out.println(String.join("|", "a,b,,c".split(",")));
+                    System.out.println("ha".repeat(3) + " " + "   ".isBlank() + " " + "".isEmpty());
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            [Hello, Android Studio!] length 22
+            H !
+            Android Studio!
+            Android
+            15 -1
+            true true true
+            HELLO, ANDROID STUDIO! / hello, android studio!
+            Hello, Android Developer!
+            a|b||c
+            hahaha true true
+          </script>
+          <div class="callout java">
+            <div class="ci">🧊</div>
+            <div><span class="ct">Strings are immutable</span>
+              <p>No String method changes the string — <code>toUpperCase()</code>, <code>replace()</code> and friends all return a <em>new</em> String. Writing <code>name.trim();</code> on its own line does nothing; you need <code>name = name.trim();</code>. Immutability makes strings safe to share between threads and to use as map keys.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="comparing" data-title="Comparing strings">
+          <div class="sec-head"><h2><span class="sec-num">6.2</span>Comparing strings</h2></div>
+          <script type="text/plain" data-code="java" data-file="Compare.java" data-run>
+            public class Compare {
+                public static void main(String[] args) {
+                    String a = "java";
+                    String b = "java";                   // same literal → same pooled object
+                    String c = new String("java");      // forced new object
+                    String d = "JA".toLowerCase() + "va";
+
+                    System.out.println(a == b);          // true  (string pool — don't rely on it)
+                    System.out.println(a == c);          // false (different objects)
+                    System.out.println(a.equals(c));     // true  (same characters) ✔
+                    System.out.println(a.equals(d));     // true
+                    System.out.println("Java".equalsIgnoreCase(a));
+                    System.out.println("apple".compareTo("banana"));  // negative: apple sorts first
+                    System.out.println("b".compareTo("a"));           // positive
+
+                    String input = null;
+                    System.out.println("yes".equals(input));          // false — no NPE when the literal is first
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            true
+            false
+            true
+            true
+            true
+            -1
+            1
+            false
+          </script>
+        </section>
+
+        <section class="doc-section" id="stringbuilder" data-title="StringBuilder">
+          <div class="sec-head"><h2><span class="sec-num">6.3</span>Building strings with <code>StringBuilder</code></h2></div>
+          <p>Because strings are immutable, <code>result += piece</code> inside a loop creates a brand-new string every iteration — O(n²) copying. <code>StringBuilder</code> is a <b>mutable</b> buffer designed for building text step by step.</p>
+          <script type="text/plain" data-code="java" data-file="Builder.java" data-run>
+            public class Builder {
+                public static void main(String[] args) {
+                    StringBuilder sb = new StringBuilder();
+                    for (int i = 1; i <= 5; i++) {
+                        if (sb.length() > 0) sb.append(", ");
+                        sb.append(i * i);
+                    }
+                    System.out.println(sb);                       // 1, 4, 9, 16, 25
+
+                    sb.insert(0, "Squares: ").append('.');
+                    System.out.println(sb.toString());
+                    System.out.println(new StringBuilder("stressed").reverse());
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            1, 4, 9, 16, 25
+            Squares: 1, 4, 9, 16, 25.
+            desserts
+          </script>
+          <p class="small muted">A single expression like <code>"a" + x + "b"</code> is fine — the compiler optimises it. Use <code>StringBuilder</code> when you build text in a <em>loop</em>.</p>
+        </section>
+
+        <section class="doc-section" id="text-blocks" data-title="Text blocks & formatting">
+          <div class="sec-head"><h2><span class="sec-num">6.4</span>Text blocks and formatting</h2></div>
+          <p>A <b>text block</b> (Java 15+) starts with <code>"""</code> and a line break. Indentation shared by all lines is removed, so you can indent it with your code. Perfect for JSON, SQL and multi-line messages.</p>
+          <script type="text/plain" data-code="java" data-file="TextBlocks.java" data-run>
+            public class TextBlocks {
+                public static void main(String[] args) {
+                    String name = "Spendly";
+                    int expenses = 3;
+                    String json = """
+                        {
+                          "app": "%s",
+                          "expenses": %d
+                        }
+                        """.formatted(name, expenses);
+                    System.out.print(json);
+
+                    System.out.println(String.format("|%-8s|%6.2f|%05d|", "coffee", 3.5, 42));
+                    System.out.println(String.format("%,d bytes", 1_234_567));
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            {
+              "app": "Spendly",
+              "expenses": 3
+            }
+            |coffee  |  3.50|00042|
+            1,234,567 bytes
+          </script>
+          <div class="table-wrap">
+            <table class="t">
+              <thead><tr><th>Format</th><th>Meaning</th><th>Example → result</th></tr></thead>
+              <tbody>
+                <tr><td><code>%-8s</code></td><td>string, left-aligned in 8 columns</td><td><code>"coffee  "</code></td></tr>
+                <tr><td><code>%6.2f</code></td><td>decimal, width 6, 2 decimals</td><td><code>"  3.50"</code></td></tr>
+                <tr><td><code>%05d</code></td><td>integer, zero-padded to 5</td><td><code>"00042"</code></td></tr>
+                <tr><td><code>%,d</code></td><td>grouping separators</td><td><code>"1,234,567"</code></td></tr>
+                <tr><td><code>%x</code> / <code>%b</code> / <code>%c</code></td><td>hex / boolean / char</td><td><code>"ff"</code> / <code>"true"</code> / <code>"A"</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="callout note">
+            <div class="ci">🌍</div>
+            <div><span class="ct">Locale matters on Android</span>
+              <p><code>String.format("%.2f", 3.5)</code> prints <code>3,50</code> on a German phone. For user-visible text that's right; for machine formats (JSON, CSV, file names) pass <code>Locale.ROOT</code>: <code>String.format(Locale.ROOT, "%.2f", x)</code>.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="chars" data-title="Characters">
+          <div class="sec-head"><h2><span class="sec-num">6.5</span>Working with characters</h2></div>
+          <script type="text/plain" data-code="java" data-file="Chars.java" data-run>
+            public class Chars {
+                public static void main(String[] args) {
+                    String pin = "12a4";
+                    int digits = 0;
+                    for (char ch : pin.toCharArray()) {
+                        if (Character.isDigit(ch)) digits++;
+                    }
+                    System.out.println(digits + " digits");
+                    System.out.println(Character.isLetter('x') + " " + Character.toUpperCase('x'));
+                    System.out.println('7' - '0');                   // char → digit value
+                    System.out.println(Character.getNumericValue('7'));
+
+                    String emoji = "Hi 👋";
+                    System.out.println(emoji.length() + " chars, " + emoji.codePointCount(0, emoji.length()) + " code points");
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            3 digits
+            true X
+            7
+            7
+            5 chars, 4 code points
+          </script>
+          <p class="small muted">A <code>char</code> is one UTF-16 unit; emoji and some scripts need two. Use code points when counting what users see as characters.</p>
+        </section>
+
+        <section class="doc-section" id="arrays" data-title="Arrays">
+          <div class="sec-head"><h2><span class="sec-num">6.6</span>Arrays</h2></div>
+          <p>An <b>array</b> is a fixed-size, ordered block of elements of one type. Its length is set at creation and never changes. Elements get default values: <code>0</code>, <code>0.0</code>, <code>false</code>, <code>'\u0000'</code> or <code>null</code>.</p>
+          <script type="text/plain" data-code="java" data-file="ArraysBasics.java" data-run>
+            public class ArraysBasics {
+                public static void main(String[] args) {
+                    int[] scores = new int[4];            // [0, 0, 0, 0]
+                    scores[0] = 90;
+                    scores[3] = 75;
+                    String[] names = {"Ada", "Linus", "Grace"};   // array initialiser
+
+                    System.out.println(scores.length + " " + names.length);  // a field, not a method
+                    System.out.println(scores[1] + " " + names[2]);
+
+                    int total = 0;
+                    for (int s : scores) total += s;
+                    System.out.println("average " + (double) total / scores.length);
+
+                    try {
+                        System.out.println(names[3]);     // valid indices are 0..2
+                    } catch (ArrayIndexOutOfBoundsException e) {
+                        System.out.println("Oops: " + e.getMessage());
+                    }
+
+                    int[] alias = scores;                 // copies the reference, not the array!
+                    alias[1] = 50;
+                    System.out.println(scores[1]);
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            4 3
+            0 Grace
+            average 41.25
+            Oops: Index 3 out of bounds for length 3
+            50
+          </script>
+        </section>
+
+        <section class="doc-section" id="arrays-util" data-title="java.util.Arrays">
+          <div class="sec-head"><h2><span class="sec-num">6.7</span>The <code>java.util.Arrays</code> toolbox</h2></div>
+          <script type="text/plain" data-code="java" data-file="ArraysUtil.java" data-run>
+            import java.util.Arrays;
+
+            public class ArraysUtil {
+                public static void main(String[] args) {
+                    int[] nums = {42, 7, 19, 3, 25};
+                    System.out.println(nums);                       // [I@1b6d3586-style garbage — no toString()!
+                    System.out.println(Arrays.toString(nums));
+
+                    int[] copy = Arrays.copyOf(nums, nums.length);  // a real copy
+                    Arrays.sort(copy);
+                    System.out.println(Arrays.toString(copy) + " original " + Arrays.toString(nums));
+                    System.out.println("19 at index " + Arrays.binarySearch(copy, 19)); // requires sorted
+
+                    int[] range = Arrays.copyOfRange(copy, 1, 4);
+                    System.out.println(Arrays.toString(range));
+
+                    char[] line = new char[10];
+                    Arrays.fill(line, '-');
+                    System.out.println(new String(line));
+
+                    System.out.println(Arrays.equals(new int[] {1, 2}, new int[] {1, 2}));
+                    System.out.println(Arrays.stream(nums).max().getAsInt()); // streams: lesson 13
+                }
+            }
+          </script>
+          <script type="text/plain" data-output data-loose>
+            [I@6d06d69c
+            [42, 7, 19, 3, 25]
+            [3, 7, 19, 25, 42] original [42, 7, 19, 3, 25]
+            19 at index 2
+            [7, 19, 25]
+            ----------
+            true
+            42
+          </script>
+          <p class="small muted">The first line differs on every run: arrays inherit <code>Object.toString()</code>, which prints the type (<code>[I</code> = int array) and a hash code.</p>
+        </section>
+
+        <section class="doc-section" id="2d" data-title="2-D arrays">
+          <div class="sec-head"><h2><span class="sec-num">6.8</span>Two-dimensional arrays</h2></div>
+          <p>Java has no true matrices: a 2-D array is an <b>array of arrays</b>. Rows can even have different lengths (“jagged” arrays).</p>
+          <script type="text/plain" data-code="java" data-file="Grid.java" data-run>
+            import java.util.Arrays;
+
+            public class Grid {
+                public static void main(String[] args) {
+                    int[][] board = new int[3][4];        // 3 rows, 4 columns
+                    for (int r = 0; r < board.length; r++) {
+                        for (int c = 0; c < board[r].length; c++) {
+                            board[r][c] = r * 10 + c;
+                        }
+                    }
+                    for (int[] row : board) System.out.println(Arrays.toString(row));
+                    System.out.println(Arrays.deepToString(board));
+
+                    int[][] triangle = {{1}, {1, 1}, {1, 2, 1}};   // jagged
+                    System.out.println(triangle[2].length + " " + triangle[2][1]);
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            [0, 1, 2, 3]
+            [10, 11, 12, 13]
+            [20, 21, 22, 23]
+            [[0, 1, 2, 3], [10, 11, 12, 13], [20, 21, 22, 23]]
+            3 2
+          </script>
+          <div class="callout tip">
+            <div class="ci">📦</div>
+            <div><span class="ct">Arrays vs lists</span>
+              <p>Arrays are fixed-size and low-level. When you need to add and remove elements, use <code>ArrayList</code> (lesson 12). On Android you'll still meet arrays in APIs like <code>String[]</code> resources, <code>byte[]</code> for files and images, and <code>int[]</code> for permissions results.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="exercises" data-title="Exercises">
+          <div class="sec-head"><h2><span class="sec-num">6.9</span>Exercises</h2></div>
+          <details class="exercise">
+            <summary>Exercise 1 — Palindrome checker <span class="badge green">Easy</span></summary>
+            <div class="ex-body">
+              <p>Write <code>isPalindrome(String s)</code> that ignores case, spaces and punctuation. “A man, a plan, a canal: Panama” → true.</p>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run>
+                public class Palindrome {
+                    static boolean isPalindrome(String s) {
+                        String clean = s.toLowerCase().replaceAll("[^a-z0-9]", ""); // regex: keep letters & digits
+                        int i = 0, j = clean.length() - 1;
+                        while (i < j) {
+                            if (clean.charAt(i++) != clean.charAt(j--)) return false;
+                        }
+                        return true;
+                    }
+
+                    public static void main(String[] args) {
+                        System.out.println(isPalindrome("A man, a plan, a canal: Panama"));
+                        System.out.println(isPalindrome("Android"));
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output>
+                true
+                false
+              </script>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 2 — Letter histogram <span class="badge blue">Medium</span></summary>
+            <div class="ex-body">
+              <p>Count how often each letter a–z appears in a sentence using an <code>int[26]</code>, then print a bar for each letter that occurs at least twice.</p>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run>
+                public class Histogram {
+                    public static void main(String[] args) {
+                        String text = "Java runs on billions of devices";
+                        int[] counts = new int[26];
+                        for (char ch : text.toLowerCase().toCharArray()) {
+                            if (ch >= 'a' && ch <= 'z') counts[ch - 'a']++;
+                        }
+                        for (int i = 0; i < counts.length; i++) {
+                            if (counts[i] >= 2) {
+                                System.out.println((char) ('a' + i) + " " + "#".repeat(counts[i]));
+                            }
+                        }
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output>
+                a ##
+                e ##
+                i ###
+                l ##
+                n ###
+                o ###
+                s ###
+                v ##
+              </script>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 3 — Transpose a matrix <span class="badge amber">Challenge</span></summary>
+            <div class="ex-body">
+              <p>Write <code>static int[][] transpose(int[][] m)</code> that turns rows into columns for any rectangular matrix (e.g. 2×3 → 3×2).</p>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run>
+                import java.util.Arrays;
+
+                public class Transpose {
+                    static int[][] transpose(int[][] m) {
+                        int[][] t = new int[m[0].length][m.length];
+                        for (int r = 0; r < m.length; r++) {
+                            for (int c = 0; c < m[0].length; c++) {
+                                t[c][r] = m[r][c];
+                            }
+                        }
+                        return t;
+                    }
+
+                    public static void main(String[] args) {
+                        int[][] m = {{1, 2, 3}, {4, 5, 6}};
+                        System.out.println(Arrays.deepToString(transpose(m)));
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output>
+                [[1, 4], [2, 5], [3, 6]]
+              </script>
+            </div>
+          </details>
+        </section>
+
+        <section class="doc-section" id="quiz" data-title="Quiz">
+          <div class="sec-head"><h2><span class="sec-num">6.10</span>Quiz</h2></div>
+          <script type="application/json" data-quiz>
+          [
+            {"q": "What does this print?", "code": "String s = \"hello\";\ns.toUpperCase();\nSystem.out.println(s);", "options": ["`HELLO`", "`hello`", "Compile error", "`Hello`"], "answer": 1, "explain": "Strings are immutable. `toUpperCase()` returns a new String, which is discarded here."},
+            {"q": "What is `\"Android\".substring(2, 5)`?", "options": ["`dro`", "`ndr`", "`droi`", "`ndro`"], "answer": 0, "explain": "Indices start at 0 and the end index is exclusive: characters 2, 3 and 4 are d, r, o."},
+            {"q": "Which is the safest way to test whether `input` equals \"yes\" when `input` may be null?", "options": ["`input == \"yes\"`", "`input.equals(\"yes\")`", "`\"yes\".equals(input)`", "`input.compareTo(\"yes\") == 0`"], "answer": 2, "explain": "Calling equals on the literal can't throw, and equals (unlike ==) compares characters. `Objects.equals(a, b)` is another null-safe option."},
+            {"q": "`int[] a = {1, 2, 3}; int[] b = a; b[0] = 9;` — what is `a[0]`?", "options": ["1", "9", "0", "Compile error"], "answer": 1, "explain": "Assignment copies the reference; `a` and `b` point to the same array. Use `Arrays.copyOf` or `a.clone()` for a copy."},
+            {"q": "Why use StringBuilder in a loop instead of `+=`?", "options": ["`+=` doesn't work on Strings", "Each `+=` creates a new String and copies everything, making the loop quadratic", "StringBuilder is thread-safe", "It produces shorter strings"], "answer": 1, "explain": "Immutable strings mean every concatenation copies all characters so far. StringBuilder appends in place."}
+          ]
+          </script>
+        </section>
+
+        <section class="doc-section" id="references" data-title="Further reading">
+          <div class="sec-head"><h2><span class="sec-num">6.11</span>Further reading</h2></div>
+          <ul>
+            <li><a href="https://dev.java/learn/numbers-strings/strings/" target="_blank" rel="noopener">dev.java — Strings</a></li>
+            <li><a href="https://dev.java/learn/numbers-strings/string-builders/" target="_blank" rel="noopener">dev.java — StringBuilder</a></li>
+            <li><a href="https://docs.oracle.com/en/java/javase/21/text-blocks/index.html" target="_blank" rel="noopener">Programmer's guide to text blocks</a></li>
+            <li><a href="https://dev.java/learn/language-basics/arrays/" target="_blank" rel="noopener">dev.java — Arrays</a></li>
+          </ul>
+        </section>
+
+        <div id="pager"></div>
+      </div>
+    </main>
+  </div>
+  <div id="site-footer"></div>
+  <script src="assets/js/core.js?v=__BUILD__"></script>
+</body>
+</html>

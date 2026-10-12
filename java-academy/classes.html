@@ -1,0 +1,530 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Classes &amp; Objects — Java Academy</title>
+  <meta name="description" content="Java classes and objects: fields, constructors, this, encapsulation, access modifiers, static members, equals/hashCode/toString, immutability and packages.">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="assets/css/main.css?v=__BUILD__">
+  <script>try{var t=localStorage.getItem("ja-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body data-page="classes">
+  <div id="site-header"></div>
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+      <div class="content-inner">
+
+        <header class="page-hero">
+          <nav class="crumbs"><a href="index.html">Home</a><span>/</span><span>Object-Oriented Java</span><span>/</span><span>Lesson 07</span></nav>
+          <div class="eyebrow">Lesson 07 · Object-Oriented Java</div>
+          <h1>Classes &amp; Objects</h1>
+          <p class="lead">Java is an object-oriented language: you model your problem as objects that bundle <b>state</b> (fields) with <b>behaviour</b> (methods). This lesson builds that skill from the ground up — constructors, encapsulation, <code>static</code>, the methods every object inherits, and immutability.</p>
+          <div class="page-meta"><span>⏱ 60 min</span><span>🎯 Intermediate</span><span>🧩 Prerequisite: lessons 03–06</span></div>
+          <div class="objectives">
+            <h4>You will be able to</h4>
+            <ul>
+              <li>Write classes with fields, constructors and methods</li>
+              <li>Protect invariants with encapsulation</li>
+              <li>Choose the right access modifier</li>
+              <li>Use <code>static</code> fields, methods and factories</li>
+              <li>Implement <code>toString</code>, <code>equals</code> and <code>hashCode</code> correctly</li>
+              <li>Design immutable classes</li>
+            </ul>
+          </div>
+        </header>
+
+        <section class="doc-section" id="objects" data-title="Classes & objects">
+          <div class="sec-head"><h2><span class="sec-num">7.1</span>Classes are blueprints, objects are instances</h2></div>
+          <p>A <b>class</b> describes what data an object holds and what it can do. <code>new</code> creates an <b>object</b> (an instance) on the heap from that blueprint. Each object has its own copy of the <b>instance fields</b>.</p>
+          <script type="text/plain" data-code="java" data-file="Dogs.java" data-run>
+            class Dog {
+                String name;          // fields: the object's state
+                int age;
+
+                void bark() {         // instance method: behaviour, uses this object's fields
+                    System.out.println(name + " says Woof!");
+                }
+
+                int humanYears() {
+                    return age * 7;
+                }
+            }
+
+            public class Dogs {
+                public static void main(String[] args) {
+                    Dog rex = new Dog();      // create an object
+                    rex.name = "Rex";
+                    rex.age = 3;
+
+                    Dog luna = new Dog();     // a second, independent object
+                    luna.name = "Luna";
+                    luna.age = 5;
+
+                    rex.bark();
+                    luna.bark();
+                    System.out.println(luna.name + " is " + luna.humanYears() + " in human years");
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            Rex says Woof!
+            Luna says Woof!
+            Luna is 35 in human years
+          </script>
+          <p class="small muted">One file may contain several classes, but only one may be <code>public</code>. In Android Studio, give each class its own file — that's the convention.</p>
+        </section>
+
+        <section class="doc-section" id="constructors" data-title="Constructors & this">
+          <div class="sec-head"><h2><span class="sec-num">7.2</span>Constructors and <code>this</code></h2></div>
+          <p>A <b>constructor</b> runs when an object is created; it has the class's name and no return type. Use it to make sure every object starts in a valid state. <code>this</code> refers to the current object — needed when a parameter has the same name as a field. <code>this(…)</code> calls another constructor of the same class.</p>
+          <script type="text/plain" data-code="java" data-file="Constructors.java" data-run>
+            class Product {
+                String name;
+                double price;
+                int stock;
+
+                Product(String name, double price, int stock) {
+                    if (price < 0) throw new IllegalArgumentException("price < 0");  // validate early
+                    this.name = name;          // this.name = the field, name = the parameter
+                    this.price = price;
+                    this.stock = stock;
+                }
+
+                Product(String name, double price) {
+                    this(name, price, 0);      // delegate: must be the first statement
+                }
+
+                String describe() {
+                    return name + " €" + price + (stock == 0 ? " (sold out)" : " (" + stock + " left)");
+                }
+            }
+
+            public class Constructors {
+                public static void main(String[] args) {
+                    System.out.println(new Product("Mug", 8.5, 12).describe());
+                    System.out.println(new Product("Poster", 15.0).describe());
+                    try {
+                        new Product("Bad", -1);
+                    } catch (IllegalArgumentException e) {
+                        System.out.println("Rejected: " + e.getMessage());
+                    }
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            Mug €8.5 (12 left)
+            Poster €15.0 (sold out)
+            Rejected: price < 0
+          </script>
+          <div class="callout note">
+            <div class="ci">ℹ️</div>
+            <div><span class="ct">The default constructor</span>
+              <p>If you write <em>no</em> constructor, Java adds an empty no-argument one — that's why <code>new Dog()</code> worked above. As soon as you declare any constructor, the default one disappears. Fields you don't assign keep their defaults (<code>0</code>, <code>false</code>, <code>null</code>).</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="encapsulation" data-title="Encapsulation">
+          <div class="sec-head"><h2><span class="sec-num">7.3</span>Encapsulation: protect your invariants</h2></div>
+          <p>Public fields let any code put an object into a nonsense state (<code>account.balance = -1_000_000</code>). <b>Encapsulation</b> means making fields <code>private</code> and exposing only methods that keep the object valid. The rules the object guarantees are its <b>invariants</b>.</p>
+          <script type="text/plain" data-code="java" data-file="Bank.java" data-run>
+            class BankAccount {
+                private final String owner;      // final: never reassigned after construction
+                private long balanceCents;       // private: only this class can touch it
+
+                BankAccount(String owner) {
+                    this.owner = owner;
+                }
+
+                public void deposit(long cents) {
+                    if (cents <= 0) throw new IllegalArgumentException("Deposit must be positive");
+                    balanceCents += cents;
+                }
+
+                public boolean withdraw(long cents) {
+                    if (cents <= 0 || cents > balanceCents) return false;   // invariant: never negative
+                    balanceCents -= cents;
+                    return true;
+                }
+
+                public long getBalanceCents() { return balanceCents; }    // read-only access
+                public String getOwner() { return owner; }
+            }
+
+            public class Bank {
+                public static void main(String[] args) {
+                    BankAccount acc = new BankAccount("Ada");
+                    acc.deposit(10_000);
+                    System.out.println(acc.withdraw(2_500));
+                    System.out.println(acc.withdraw(50_000));
+                    System.out.println(acc.getOwner() + ": " + acc.getBalanceCents() / 100.0);
+                    // acc.balanceCents = -1;   // ✗ error: balanceCents has private access
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            true
+            false
+            Ada: 75.0
+          </script>
+          <div class="callout tip">
+            <div class="ci">💡</div>
+            <div><span class="ct">Don't generate setters by reflex</span>
+              <p>A getter/setter pair for every field is just a public field with extra steps. Expose <em>operations</em> that mean something in your domain (<code>deposit</code>, <code>withdraw</code>) and only the getters callers truly need. Android Studio's <b>Generate</b> (<kbd>Alt</kbd>+<kbd>Insert</kbd>) can write getters when you do need them.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="access" data-title="Access modifiers">
+          <div class="sec-head"><h2><span class="sec-num">7.4</span>Access modifiers</h2></div>
+          <div class="table-wrap">
+            <table class="t">
+              <thead><tr><th>Modifier</th><th>Same class</th><th>Same package</th><th>Subclass (other package)</th><th>Everywhere</th></tr></thead>
+              <tbody>
+                <tr><td><code>private</code></td><td>✔</td><td>✘</td><td>✘</td><td>✘</td></tr>
+                <tr><td><em>(none)</em> package-private</td><td>✔</td><td>✔</td><td>✘</td><td>✘</td></tr>
+                <tr><td><code>protected</code></td><td>✔</td><td>✔</td><td>✔</td><td>✘</td></tr>
+                <tr><td><code>public</code></td><td>✔</td><td>✔</td><td>✔</td><td>✔</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><b>Rule of thumb:</b> start with <code>private</code> and widen only when needed. Fields: almost always <code>private</code>. Package-private is great for helpers that only one package uses — the Spendly app uses it to hide implementation classes.</p>
+        </section>
+
+        <section class="doc-section" id="static" data-title="static members">
+          <div class="sec-head"><h2><span class="sec-num">7.5</span><code>static</code>: members that belong to the class</h2></div>
+          <p>A <code>static</code> field has <b>one copy shared by all instances</b>; a <code>static</code> method runs without an object, so it cannot use <code>this</code> or instance fields. Use static for constants, counters, utility functions and <b>factory methods</b>.</p>
+          <script type="text/plain" data-code="java" data-file="Statics.java" data-run>
+            class Ticket {
+                static final int MAX_SEATS = 3;        // a constant
+                private static int issued = 0;         // shared by all tickets
+
+                private final int number;
+                private final String holder;
+
+                private Ticket(String holder) {        // private: force callers to use the factory
+                    this.number = ++issued;
+                    this.holder = holder;
+                }
+
+                static Ticket issue(String holder) {   // static factory method
+                    if (issued >= MAX_SEATS) throw new IllegalStateException("Sold out");
+                    return new Ticket(holder);
+                }
+
+                static int issuedCount() { return issued; }
+
+                @Override
+                public String toString() { return "#" + number + " " + holder; }
+            }
+
+            public class Statics {
+                public static void main(String[] args) {
+                    System.out.println(Ticket.issue("Ada"));
+                    System.out.println(Ticket.issue("Grace"));
+                    System.out.println("Issued: " + Ticket.issuedCount() + "/" + Ticket.MAX_SEATS);
+                    System.out.println(Math.abs(-3) + " " + Integer.parseInt("12")); // static methods of the JDK
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            #1 Ada
+            #2 Grace
+            Issued: 2/3
+            3 12
+          </script>
+          <div class="callout warn">
+            <div class="ci">⚠️</div>
+            <div><span class="ct">Static state on Android</span>
+              <p>Mutable <code>static</code> fields live as long as the app process — and Android kills and recreates processes at will. Never keep a <code>static</code> reference to an <code>Activity</code>, <code>View</code> or <code>Context</code>: it leaks the whole screen's memory. Lesson 19 shows the right place for long-lived state.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="object-methods" data-title="toString, equals & hashCode">
+          <div class="sec-head"><h2><span class="sec-num">7.6</span><code>toString</code>, <code>equals</code> and <code>hashCode</code></h2></div>
+          <p>Every class extends <code>java.lang.Object</code> and inherits these three methods. The defaults are rarely what you want: <code>toString()</code> prints <code>Point@1b6d3586</code>, and <code>equals()</code> behaves like <code>==</code>. For “value-like” classes, override them.</p>
+          <script type="text/plain" data-code="java" data-file="Points.java" data-run>
+            import java.util.HashSet;
+            import java.util.Objects;
+            import java.util.Set;
+
+            class Point {
+                private final int x, y;
+
+                Point(int x, int y) { this.x = x; this.y = y; }
+
+                @Override
+                public String toString() {
+                    return "Point(" + x + ", " + y + ")";
+                }
+
+                @Override
+                public boolean equals(Object o) {
+                    if (this == o) return true;
+                    if (!(o instanceof Point other)) return false;   // pattern matching (lesson 09)
+                    return x == other.x && y == other.y;
+                }
+
+                @Override
+                public int hashCode() {
+                    return Objects.hash(x, y);      // equal objects MUST have equal hash codes
+                }
+            }
+
+            public class Points {
+                public static void main(String[] args) {
+                    Point a = new Point(1, 2), b = new Point(1, 2);
+                    System.out.println(a);                    // println calls toString()
+                    System.out.println(a == b);               // different objects
+                    System.out.println(a.equals(b));          // same value
+                    Set<Point> set = new HashSet<>();
+                    set.add(a);
+                    set.add(b);
+                    System.out.println(set.size());           // 1 — thanks to equals + hashCode
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            Point(1, 2)
+            false
+            true
+            1
+          </script>
+          <div class="callout danger">
+            <div class="ci">📜</div>
+            <div><span class="ct">The equals/hashCode contract</span>
+              <p>If you override <code>equals</code>, you <b>must</b> override <code>hashCode</code> so that equal objects return equal hash codes — otherwise <code>HashMap</code> and <code>HashSet</code> silently break. <code>@Override</code> asks the compiler to verify you really are overriding (a typo like <code>equals(Point o)</code> would otherwise create an unrelated overload). In lesson 09, <b>records</b> generate all three methods for you.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="immutability" data-title="Immutable classes">
+          <div class="sec-head"><h2><span class="sec-num">7.7</span>Designing immutable classes</h2></div>
+          <p>An <b>immutable</b> object can't change after construction — like <code>String</code>. Immutable objects are simpler to reason about, safe to share between threads and perfect as map keys. Recipe: <code>final</code> class, <code>private final</code> fields, no setters, and “withers” that return modified copies.</p>
+          <script type="text/plain" data-code="java" data-file="MoneyDemo.java" data-run>
+            final class Money {                          // final: can't be subclassed into something mutable
+                private final long cents;
+                private final String currency;
+
+                Money(long cents, String currency) {
+                    this.cents = cents;
+                    this.currency = currency;
+                }
+
+                Money plus(Money other) {
+                    if (!currency.equals(other.currency)) throw new IllegalArgumentException("Currency mismatch");
+                    return new Money(cents + other.cents, currency);   // a new object
+                }
+
+                Money times(int factor) { return new Money(cents * factor, currency); }
+
+                @Override
+                public String toString() {
+                    return String.format("%d.%02d %s", cents / 100, cents % 100, currency);
+                }
+            }
+
+            public class MoneyDemo {
+                public static void main(String[] args) {
+                    Money coffee = new Money(350, "EUR");
+                    Money order = coffee.times(2).plus(new Money(425, "EUR"));
+                    System.out.println(coffee + " → " + order);   // coffee is unchanged
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            3.50 EUR → 11.25 EUR
+          </script>
+        </section>
+
+        <section class="doc-section" id="packages" data-title="Packages & imports">
+          <div class="sec-head"><h2><span class="sec-num">7.8</span>Packages and imports</h2></div>
+          <p>A <b>package</b> groups related classes and forms a namespace. The <code>package</code> line must be the first statement and must match the folder path. <code>import</code> lets you use a class by its short name.</p>
+          <script type="text/plain" data-code="java" data-file="lessons/src/main/java/com/example/lessons/l07/Order.java">
+            package com.example.lessons.l07;          // folder: com/example/lessons/l07/
+
+            import java.time.LocalDate;              // one class
+            import java.util.*;                      // every class in java.util (no sub-packages)
+
+            public class Order {
+                private final List<String> items = new ArrayList<>();
+                private final LocalDate date = LocalDate.now();
+                private final java.awt.Color color = null; // or use the fully-qualified name
+            }
+          </script>
+          <p class="small muted"><code>java.lang</code> (<code>String</code>, <code>Math</code>, <code>System</code>, <code>Integer</code>…) is imported automatically. Android Studio adds imports for you — <b>Optimize Imports</b> (<kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>O</kbd>) removes unused ones.</p>
+        </section>
+
+        <section class="doc-section" id="lifecycle" data-title="Object lifetime & garbage collection">
+          <div class="sec-head"><h2><span class="sec-num">7.9</span>Object lifetime and garbage collection</h2></div>
+          <p>Objects live on the heap as long as something can reach them through references. When nothing does, the <b>garbage collector</b> (GC) reclaims the memory automatically — there's no <code>delete</code> in Java. Your job is to avoid keeping references you no longer need (for example in static fields or long-lived lists): that's what a <b>memory leak</b> means in Java.</p>
+          <script type="text/plain" data-code="java" data-file="Lifetime.java">
+            Dog a = new Dog();   // object #1 reachable via a
+            Dog b = new Dog();   // object #2 reachable via b
+            a = b;               // nothing points to #1 any more → eligible for GC
+            b = null;            // #2 still reachable via a
+          </script>
+        </section>
+
+        <section class="doc-section" id="exercises" data-title="Exercises">
+          <div class="sec-head"><h2><span class="sec-num">7.10</span>Exercises</h2></div>
+          <details class="exercise">
+            <summary>Exercise 1 — Rectangle <span class="badge green">Easy</span></summary>
+            <div class="ex-body">
+              <p>Write a <code>Rectangle</code> class with private <code>width</code> and <code>height</code>, a constructor that rejects non-positive sizes, <code>area()</code>, <code>perimeter()</code>, <code>isSquare()</code> and <code>toString()</code>.</p>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run>
+                class Rectangle {
+                    private final double width, height;
+
+                    Rectangle(double width, double height) {
+                        if (width <= 0 || height <= 0) throw new IllegalArgumentException("sizes must be > 0");
+                        this.width = width;
+                        this.height = height;
+                    }
+
+                    double area() { return width * height; }
+                    double perimeter() { return 2 * (width + height); }
+                    boolean isSquare() { return width == height; }
+
+                    @Override
+                    public String toString() { return "Rectangle " + width + "×" + height; }
+                }
+
+                public class Shapes {
+                    public static void main(String[] args) {
+                        Rectangle r = new Rectangle(3, 4);
+                        System.out.println(r + " area=" + r.area() + " perimeter=" + r.perimeter() + " square=" + r.isSquare());
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output>
+                Rectangle 3.0×4.0 area=12.0 perimeter=14.0 square=false
+              </script>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 2 — Unique IDs <span class="badge blue">Medium</span></summary>
+            <div class="ex-body">
+              <p>Create a <code>User</code> class where every new user automatically gets the next id (1, 2, 3…) from a <code>private static</code> counter. Two users are <code>equal</code> if their ids are equal.</p>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run>
+                import java.util.Objects;
+
+                class User {
+                    private static int nextId = 1;
+                    private final int id;
+                    private final String name;
+
+                    User(String name) {
+                        this.id = nextId++;
+                        this.name = name;
+                    }
+
+                    @Override public boolean equals(Object o) { return o instanceof User u && u.id == id; }
+                    @Override public int hashCode() { return Integer.hashCode(id); }
+                    @Override public String toString() { return id + ":" + name; }
+                }
+
+                public class Users {
+                    public static void main(String[] args) {
+                        User a = new User("Ada"), b = new User("Ben"), c = new User("Ada");
+                        System.out.println(a + " " + b + " " + c);
+                        System.out.println(a.equals(c));    // same name, different users
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output>
+                1:Ada 2:Ben 3:Ada
+                false
+              </script>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 3 — Immutable shopping cart line <span class="badge amber">Challenge</span></summary>
+            <div class="ex-body">
+              <p>Design an immutable <code>CartLine(String product, int quantity, long unitCents)</code> with <code>withQuantity(int)</code>, <code>totalCents()</code>, <code>equals</code>/<code>hashCode</code> over all fields and a <code>toString</code> like <code>2 × Mug @ 8.50 = 17.00</code>.</p>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run>
+                import java.util.Objects;
+
+                final class CartLine {
+                    private final String product;
+                    private final int quantity;
+                    private final long unitCents;
+
+                    CartLine(String product, int quantity, long unitCents) {
+                        if (quantity < 1) throw new IllegalArgumentException("quantity < 1");
+                        this.product = Objects.requireNonNull(product);
+                        this.quantity = quantity;
+                        this.unitCents = unitCents;
+                    }
+
+                    CartLine withQuantity(int q) { return new CartLine(product, q, unitCents); }
+                    long totalCents() { return quantity * unitCents; }
+
+                    private static String fmt(long c) { return String.format("%d.%02d", c / 100, c % 100); }
+
+                    @Override public String toString() {
+                        return quantity + " × " + product + " @ " + fmt(unitCents) + " = " + fmt(totalCents());
+                    }
+                    @Override public boolean equals(Object o) {
+                        return o instanceof CartLine l && l.quantity == quantity && l.unitCents == unitCents && l.product.equals(product);
+                    }
+                    @Override public int hashCode() { return Objects.hash(product, quantity, unitCents); }
+                }
+
+                public class Cart {
+                    public static void main(String[] args) {
+                        CartLine line = new CartLine("Mug", 1, 850);
+                        CartLine two = line.withQuantity(2);
+                        System.out.println(line);
+                        System.out.println(two);
+                        System.out.println(two.equals(new CartLine("Mug", 2, 850)));
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output>
+                1 × Mug @ 8.50 = 8.50
+                2 × Mug @ 8.50 = 17.00
+                true
+              </script>
+            </div>
+          </details>
+        </section>
+
+        <section class="doc-section" id="quiz" data-title="Quiz">
+          <div class="sec-head"><h2><span class="sec-num">7.11</span>Quiz</h2></div>
+          <script type="application/json" data-quiz>
+          [
+            {"q": "A class declares only `Car(String model)`. Does `new Car()` compile?", "options": ["Yes, Java always provides a no-arg constructor", "No — the default constructor is only added when you declare none", "Yes, with model = null", "Only inside the same package"], "answer": 1, "explain": "Once any constructor exists, the implicit no-arg constructor is gone. Add one explicitly if you need it."},
+            {"q": "Which members can a `static` method use directly?", "options": ["Instance fields and `this`", "Only static fields and static methods (or instances it is given)", "Everything in the class", "Nothing"], "answer": 1, "explain": "A static method runs without an object, so there is no `this`. It can still use objects passed to it or created inside it."},
+            {"q": "You override `equals` but not `hashCode`. What breaks?", "options": ["Nothing", "`toString`", "Hash-based collections like HashSet and HashMap", "The compiler rejects it"], "answer": 2, "explain": "Equal objects would land in different hash buckets, so a HashSet may contain 'duplicates' and `map.get` may miss keys."},
+            {"q": "What does package-private (no modifier) mean?", "options": ["Visible only inside the class", "Visible to all classes in the same package", "Visible to subclasses everywhere", "Visible everywhere"], "answer": 1, "explain": "No modifier = accessible within the same package only."},
+            {"q": "Which is NOT part of the recipe for an immutable class?", "options": ["`private final` fields", "No setters", "Methods that return modified copies", "A public no-arg constructor that sets defaults later"], "answer": 3, "explain": "Immutable objects are fully initialised in the constructor and never change afterwards."}
+          ]
+          </script>
+        </section>
+
+        <section class="doc-section" id="references" data-title="Further reading">
+          <div class="sec-head"><h2><span class="sec-num">7.12</span>Further reading</h2></div>
+          <ul>
+            <li><a href="https://dev.java/learn/classes-objects/" target="_blank" rel="noopener">dev.java — Classes and objects</a></li>
+            <li><a href="https://dev.java/learn/classes-objects/more-on-classes/" target="_blank" rel="noopener">dev.java — More on classes (this, access control, static)</a></li>
+            <li><a href="https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Object.html#equals(java.lang.Object)" target="_blank" rel="noopener">Object.equals — the full contract</a></li>
+            <li>Joshua Bloch, <em>Effective Java</em> (3rd ed.), items 10–17</li>
+          </ul>
+        </section>
+
+        <div id="pager"></div>
+      </div>
+    </main>
+  </div>
+  <div id="site-footer"></div>
+  <script src="assets/js/core.js?v=__BUILD__"></script>
+</body>
+</html>

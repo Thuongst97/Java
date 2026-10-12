@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Methods — Java Academy</title>
+  <meta name="description" content="Java methods: parameters and return values, guard clauses, overloading, pass-by-value, varargs, scope and recursion.">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="assets/css/main.css?v=__BUILD__">
+  <script>try{var t=localStorage.getItem("ja-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body data-page="methods">
+  <div id="site-header"></div>
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+      <div class="content-inner">
+
+        <header class="page-hero">
+          <nav class="crumbs"><a href="index.html">Home</a><span>/</span><span>Java Fundamentals</span><span>/</span><span>Lesson 05</span></nav>
+          <div class="eyebrow">Lesson 05 · Java Fundamentals</div>
+          <h1>Methods</h1>
+          <p class="lead">Methods give a name to a piece of logic so you can reuse it, test it and reason about it. Learn how to declare them, how arguments are really passed, overloading, varargs, scope and recursion.</p>
+          <div class="page-meta"><span>⏱ 45 min</span><span>🎯 Beginner</span><span>🧩 Prerequisite: lesson 04</span></div>
+          <div class="objectives">
+            <h4>You will be able to</h4>
+            <ul>
+              <li>Declare methods with parameters and return values</li>
+              <li>Overload methods safely</li>
+              <li>Explain Java's pass-by-value semantics</li>
+              <li>Accept a variable number of arguments</li>
+              <li>Reason about scope and lifetime</li>
+              <li>Write and debug recursive methods</li>
+            </ul>
+          </div>
+        </header>
+
+        <section class="doc-section" id="declaring" data-title="Declaring & calling methods">
+          <div class="sec-head"><h2><span class="sec-num">5.1</span>Declaring and calling methods</h2></div>
+          <p>A method has a <b>signature</b> — modifiers, return type, name and parameter list — and a body. For now all our methods are <code>static</code>: they belong to the class and are called without creating an object (lesson 07 introduces instance methods).</p>
+          <script type="text/plain" data-code="java" data-file="Shop.java" data-run>
+            public class Shop {
+                //  modifiers   return type  name        parameters
+                    static      double       totalPrice(double unitPrice, int quantity) {
+                    return unitPrice * quantity;          // return hands the value back
+                }
+
+                static void printReceipt(String item, double total) {   // void: returns nothing
+                    System.out.printf("%-10s %8.2f%n", item, total);
+                }
+
+                public static void main(String[] args) {
+                    double coffee = totalPrice(3.50, 2);   // arguments are matched by position
+                    double cake = totalPrice(4.25, 1);
+                    printReceipt("Coffee", coffee);
+                    printReceipt("Cake", cake);
+                    printReceipt("TOTAL", coffee + cake);
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            Coffee         7.00
+            Cake           4.25
+            TOTAL         11.25
+          </script>
+          <dl class="kv">
+            <dt>Parameters</dt><dd>The variables in the declaration (<code>unitPrice</code>, <code>quantity</code>).</dd>
+            <dt>Arguments</dt><dd>The actual values passed in a call (<code>3.50</code>, <code>2</code>).</dd>
+            <dt><code>return</code></dt><dd>Ends the method immediately and produces its value. A non-<code>void</code> method must return a value on <em>every</em> path — the compiler checks.</dd>
+          </dl>
+        </section>
+
+        <section class="doc-section" id="early-return" data-title="Early return & guard clauses">
+          <div class="sec-head"><h2><span class="sec-num">5.2</span>Early returns and guard clauses</h2></div>
+          <p>Handle special cases first and <code>return</code> early. The “happy path” then reads without deep nesting.</p>
+          <script type="text/plain" data-code="java" data-file="Shipping.java" data-run>
+            public class Shipping {
+                static double shippingCost(double orderTotal, boolean isMember) {
+                    if (orderTotal <= 0) return 0;            // guard: nothing to ship
+                    if (isMember || orderTotal >= 50) return 0; // guard: free shipping
+                    return orderTotal < 20 ? 4.99 : 2.99;
+                }
+
+                public static void main(String[] args) {
+                    System.out.println(shippingCost(10, false));
+                    System.out.println(shippingCost(30, false));
+                    System.out.println(shippingCost(30, true));
+                    System.out.println(shippingCost(80, false));
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            4.99
+            2.99
+            0.0
+            0.0
+          </script>
+        </section>
+
+        <section class="doc-section" id="overloading" data-title="Overloading">
+          <div class="sec-head"><h2><span class="sec-num">5.3</span>Overloading</h2></div>
+          <p>Several methods may share a name if their <b>parameter lists differ</b> (number or types). The compiler picks the best match at compile time. The return type alone is <em>not</em> enough to overload.</p>
+          <script type="text/plain" data-code="java" data-file="Overload.java" data-run>
+            public class Overload {
+                static int area(int side) { return side * side; }
+                static int area(int width, int height) { return width * height; }
+                static double area(double radius) { return Math.PI * radius * radius; }
+
+                public static void main(String[] args) {
+                    System.out.println(area(4));          // square
+                    System.out.println(area(3, 5));       // rectangle
+                    System.out.printf("%.2f%n", area(1.5)); // circle
+                    System.out.println(Math.max(2, 7) + " " + Math.max(2.5, 7.1)); // the JDK overloads too
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            16
+            15
+            7.07
+            7 7.1
+          </script>
+        </section>
+
+        <section class="doc-section" id="pass-by-value" data-title="Pass-by-value">
+          <div class="sec-head"><h2><span class="sec-num">5.4</span>Java is always pass-by-value</h2></div>
+          <p>When you call a method, each parameter receives a <b>copy</b> of the argument. For a primitive, that's a copy of the number. For a reference, it's a copy of the <em>arrow</em> — both arrows point to the same object. So a method can <b>change the object</b>, but it cannot make the caller's variable point somewhere else.</p>
+          <script type="text/plain" data-code="java" data-file="PassByValue.java" data-run>
+            import java.util.Arrays;
+
+            public class PassByValue {
+                static void addTen(int n) { n += 10; }             // changes the copy only
+
+                static void doubleFirst(int[] values) { values[0] *= 2; } // changes the shared object
+
+                static void replace(int[] values) {
+                    values = new int[] {99, 99};                   // re-points the COPY of the arrow
+                }
+
+                public static void main(String[] args) {
+                    int score = 5;
+                    addTen(score);
+                    System.out.println(score);                     // still 5
+
+                    int[] data = {1, 2};
+                    doubleFirst(data);
+                    System.out.println(Arrays.toString(data));     // [2, 2] — the array changed
+
+                    replace(data);
+                    System.out.println(Arrays.toString(data));     // [2, 2] — caller unaffected
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            5
+            [2, 2]
+            [2, 2]
+          </script>
+          <div class="callout analogy">
+            <div class="ci">🏠</div>
+            <div><span class="ct">Analogy</span>
+              <p>Passing a reference is like giving someone a photocopy of your house address. They can go there and repaint the door (mutate the object). If they scribble a different address on <em>their</em> copy, your copy still points to your house.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="varargs" data-title="Varargs">
+          <div class="sec-head"><h2><span class="sec-num">5.5</span>Varargs: any number of arguments</h2></div>
+          <p>A last parameter written <code>Type... name</code> accepts zero or more arguments; inside the method it's an array. <code>String.format</code>, <code>List.of</code> and <code>printf</code> all use varargs.</p>
+          <script type="text/plain" data-code="java" data-file="Varargs.java" data-run>
+            public class Varargs {
+                static int sum(int... numbers) {
+                    int total = 0;
+                    for (int n : numbers) total += n;
+                    return total;
+                }
+
+                static String join(String separator, String... parts) { // varargs must be last
+                    return String.join(separator, parts);
+                }
+
+                public static void main(String[] args) {
+                    System.out.println(sum());
+                    System.out.println(sum(4));
+                    System.out.println(sum(1, 2, 3, 4));
+                    System.out.println(sum(new int[] {10, 20}));  // an array works too
+                    System.out.println(join(" · ", "Java", "Android", "Studio"));
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            0
+            4
+            10
+            30
+            Java · Android · Studio
+          </script>
+        </section>
+
+        <section class="doc-section" id="scope" data-title="Scope & lifetime">
+          <div class="sec-head"><h2><span class="sec-num">5.6</span>Scope and lifetime</h2></div>
+          <p>A local variable exists from its declaration to the end of the enclosing <code>{ }</code> block. Parameters are locals of the method. Every call gets fresh copies — that's what makes recursion work.</p>
+          <script type="text/plain" data-code="java" data-file="Scope.java">
+            static void demo() {
+                int a = 1;
+                if (a > 0) {
+                    int b = 2;               // b lives only inside this block
+                    System.out.println(a + b);
+                }
+                // System.out.println(b);   // ✗ cannot find symbol: b is out of scope
+                for (int i = 0; i < 3; i++) { /* i exists only in the loop */ }
+                int a = 5;                   // ✗ variable a is already defined (no shadowing of locals)
+            }
+          </script>
+        </section>
+
+        <section class="doc-section" id="recursion" data-title="Recursion">
+          <div class="sec-head"><h2><span class="sec-num">5.7</span>Recursion</h2></div>
+          <p>A <b>recursive</b> method calls itself on a smaller version of the problem. It needs a <b>base case</b> that stops the recursion; otherwise each call adds a frame to the <b>call stack</b> until a <code>StackOverflowError</code>.</p>
+          <script type="text/plain" data-code="java" data-file="Recursion.java" data-run>
+            public class Recursion {
+                static long factorial(int n) {
+                    if (n <= 1) return 1;            // base case
+                    return n * factorial(n - 1);     // recursive case: smaller problem
+                }
+
+                static int sumDigits(int n) {
+                    return n < 10 ? n : n % 10 + sumDigits(n / 10);
+                }
+
+                static long[] memo = new long[91];
+                static long fib(int n) {             // memoised: each value computed once
+                    if (n < 2) return n;
+                    if (memo[n] != 0) return memo[n];
+                    return memo[n] = fib(n - 1) + fib(n - 2);
+                }
+
+                public static void main(String[] args) {
+                    System.out.println(factorial(5));
+                    System.out.println(factorial(20));
+                    System.out.println(sumDigits(98765));
+                    System.out.println(fib(90));
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            120
+            2432902008176640000
+            35
+            2880067194370816120
+          </script>
+          <figure class="diagram">
+            <svg viewBox="0 0 560 190" width="560" role="img" aria-label="Call stack for factorial(3)">
+              <g font-family="JetBrains Mono, monospace" font-size="13">
+                <rect x="20" y="20" width="250" height="34" rx="6" fill="rgba(248,152,32,.12)" stroke="#f89820"/><text x="32" y="42" fill="currentColor">factorial(1) → 1</text>
+                <rect x="20" y="60" width="250" height="34" rx="6" fill="rgba(248,152,32,.08)" stroke="#f89820"/><text x="32" y="82" fill="currentColor">factorial(2) → 2 * 1</text>
+                <rect x="20" y="100" width="250" height="34" rx="6" fill="rgba(248,152,32,.05)" stroke="#f89820"/><text x="32" y="122" fill="currentColor">factorial(3) → 3 * 2</text>
+                <rect x="20" y="140" width="250" height="34" rx="6" fill="rgba(108,184,255,.08)" stroke="#6cb8ff"/><text x="32" y="162" fill="currentColor">main</text>
+                <text x="300" y="42" fill="#9a98a8" font-family="Inter, sans-serif">← top of stack: base case returns first</text>
+                <text x="300" y="122" fill="#9a98a8" font-family="Inter, sans-serif">← finishes last with 6</text>
+              </g>
+            </svg>
+            <figcaption>Each call gets its own stack frame with its own <code>n</code>. Frames are popped as results return.</figcaption>
+          </figure>
+          <div class="callout tip">
+            <div class="ci">🐞</div>
+            <div><span class="ct">Watch it in the debugger</span>
+              <p>Set a breakpoint on the <code>return</code> line in Android Studio and start <b>Debug</b> (🐞). The <b>Frames</b> panel shows one entry per active call — the call stack made visible. Step with <kbd>F8</kbd> (over) and <kbd>F7</kbd> (into).</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="design" data-title="Designing good methods">
+          <div class="sec-head"><h2><span class="sec-num">5.8</span>Designing good methods</h2></div>
+          <ul class="checklist">
+            <li><b>Do one thing</b> and name it with a verb: <code>calculateTax</code>, <code>isValidEmail</code>, <code>formatPrice</code>.</li>
+            <li><b>Keep them short</b> — if you need a comment to separate “parts”, extract each part into its own method (<kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>M</kbd> / <kbd>⌘</kbd>+<kbd>⌥</kbd>+<kbd>M</kbd> = <b>Extract Method</b>).</li>
+            <li><b>Few parameters</b> — more than three or four is a hint to introduce a class or record (lesson 09).</li>
+            <li><b>Prefer pure methods</b>: output depends only on inputs, no hidden side effects. They're trivial to test.</li>
+            <li><b>Return, don't print</b>: a method that returns a value can be reused by a UI, a test or a server; one that prints cannot.</li>
+          </ul>
+        </section>
+
+        <section class="doc-section" id="exercises" data-title="Exercises">
+          <div class="sec-head"><h2><span class="sec-num">5.9</span>Exercises</h2></div>
+          <details class="exercise">
+            <summary>Exercise 1 — Leap year <span class="badge green">Easy</span></summary>
+            <div class="ex-body">
+              <p>Write <code>static boolean isLeapYear(int year)</code> (divisible by 4, except centuries, except every 400 years) and test it with 1900, 2000, 2024 and 2025.</p>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run>
+                public class Leap {
+                    static boolean isLeapYear(int year) {
+                        return (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
+                    }
+
+                    public static void main(String[] args) {
+                        for (int y : new int[] {1900, 2000, 2024, 2025}) {
+                            System.out.println(y + ": " + isLeapYear(y));
+                        }
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output>
+                1900: false
+                2000: true
+                2024: true
+                2025: false
+              </script>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 2 — Greatest common divisor <span class="badge blue">Medium</span></summary>
+            <div class="ex-body">
+              <p>Implement Euclid's algorithm recursively: <code>gcd(a, 0) = a</code>, otherwise <code>gcd(a, b) = gcd(b, a % b)</code>. Then overload <code>gcd(int... numbers)</code> to work for any count of numbers.</p>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run>
+                public class Gcd {
+                    static int gcd(int a, int b) {
+                        return b == 0 ? a : gcd(b, a % b);
+                    }
+
+                    static int gcd(int... numbers) {
+                        int result = 0;
+                        for (int n : numbers) result = gcd(result, n);
+                        return result;
+                    }
+
+                    public static void main(String[] args) {
+                        System.out.println(gcd(48, 18));
+                        System.out.println(gcd(12, 30, 42));
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output>
+                6
+                6
+              </script>
+              <p class="small muted"><code>gcd(48, 18)</code> picks the two-parameter method: an exact match beats varargs.</p>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 3 — Fast power <span class="badge amber">Challenge</span></summary>
+            <div class="ex-body">
+              <p>Write <code>static long power(long base, int exp)</code> using <b>exponentiation by squaring</b>: <code>x<sup>n</sup> = (x<sup>n/2</sup>)²</code> for even n, <code>x · x<sup>n−1</sup></code> for odd n. How many calls does <code>power(2, 62)</code> make compared to a simple loop?</p>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run>
+                public class Power {
+                    static int calls = 0;
+
+                    static long power(long base, int exp) {
+                        calls++;
+                        if (exp == 0) return 1;
+                        if (exp % 2 == 1) return base * power(base, exp - 1);
+                        long half = power(base, exp / 2);
+                        return half * half;
+                    }
+
+                    public static void main(String[] args) {
+                        System.out.println(power(2, 62) + " in " + calls + " calls (a loop needs 62)");
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output>
+                4611686018427387904 in 11 calls (a loop needs 62)
+              </script>
+            </div>
+          </details>
+        </section>
+
+        <section class="doc-section" id="quiz" data-title="Quiz">
+          <div class="sec-head"><h2><span class="sec-num">5.10</span>Quiz</h2></div>
+          <script type="application/json" data-quiz>
+          [
+            {"q": "Which pair is a valid overload?", "options": ["`int f(int a)` and `long f(int a)`", "`void f(int a)` and `void f(int b)`", "`void f(int a)` and `void f(long a)`", "`static void f()` and `void f()`"], "answer": 2, "explain": "Overloads must differ in parameter types or count. Return type, parameter names or `static` alone don't count."},
+            {"q": "What prints?", "code": "static void reset(int[] a) { a = new int[3]; }\n\nint[] nums = {7, 8, 9};\nreset(nums);\nSystem.out.println(nums[0]);", "options": ["0", "7", "Compile error", "NullPointerException"], "answer": 1, "explain": "The method reassigns its own copy of the reference; the caller's `nums` still points at the original array."},
+            {"q": "Inside `static int sum(int... xs)`, what is the type of `xs`?", "options": ["`int`", "`List<Integer>`", "`int[]`", "`Integer...`"], "answer": 2, "explain": "Varargs parameters are arrays inside the method. Callers may pass separate values or an array."},
+            {"q": "A recursive method has no base case. What happens at runtime?", "options": ["Infinite loop with no error", "StackOverflowError", "The compiler rejects it", "OutOfMemoryError immediately"], "answer": 1, "explain": "Each call pushes a stack frame; the stack is limited, so eventually the JVM throws StackOverflowError."},
+            {"q": "Why prefer methods that return values over methods that print?", "options": ["Printing is slow", "Returned values can be reused by other code, UIs and tests", "Java forbids printing in methods", "Return values use less memory"], "answer": 1, "explain": "Separating computation from presentation makes code reusable (Android UI, servers) and testable."}
+          ]
+          </script>
+        </section>
+
+        <section class="doc-section" id="references" data-title="Further reading">
+          <div class="sec-head"><h2><span class="sec-num">5.11</span>Further reading</h2></div>
+          <ul>
+            <li><a href="https://dev.java/learn/classes-objects/defining-methods/" target="_blank" rel="noopener">dev.java — Defining methods</a></li>
+            <li><a href="https://dev.java/learn/classes-objects/calling-methods-constructors/" target="_blank" rel="noopener">dev.java — Passing information to a method</a></li>
+            <li><a href="https://www.jetbrains.com/help/idea/debugging-code.html" target="_blank" rel="noopener">Debugging in IntelliJ-based IDEs (Android Studio)</a></li>
+          </ul>
+        </section>
+
+        <div id="pager"></div>
+      </div>
+    </main>
+  </div>
+  <div id="site-footer"></div>
+  <script src="assets/js/core.js?v=__BUILD__"></script>
+</body>
+</html>

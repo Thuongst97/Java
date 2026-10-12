@@ -88,7 +88,7 @@ def collect(pages):
                 loose = "data-loose" in blocks[i + 1]["attrs"]
             snippets.append({
                 "page": os.path.basename(page), "line": b["line"], "code": clean(b["text"]),
-                "stdin": a.get("data-stdin", "").replace("\\n", "\n"),
+                "stdin": a.get("data-stdin", "").replace("\\n", "\n"), "file": a.get("data-file", ""),
                 "expected": expected, "loose": loose,
             })
     return snippets
@@ -111,6 +111,10 @@ def check(s, work, release, timeout):
     d = os.path.join(work, f"s{s['n']}")
     os.makedirs(d)
     name = main_class(s["code"])
+    shown = os.path.basename(s["file"].split(" ")[0])
+    public = PUBLIC_TYPE.search(s["code"])
+    if shown.endswith(".java") and public and shown != public.group(1) + ".java":
+        return "file name mismatch", f"data-file says {shown} but the public class is {public.group(1)}"
     with open(os.path.join(d, name + ".java"), "w", encoding="utf-8") as f:
         f.write(s["code"] + "\n")
     c = subprocess.run(["javac", "--release", str(release), "-nowarn", "-encoding", "UTF-8", "-d", d, os.path.join(d, name + ".java")],
