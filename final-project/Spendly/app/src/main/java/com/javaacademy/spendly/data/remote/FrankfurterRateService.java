@@ -9,7 +9,7 @@ import java.nio.charset.StandardCharsets;
 
 /**
  * Fetches rates from the free, key-less Frankfurter API (European Central Bank data) using plain
- * {@link HttpURLConnection} — no extra library needed (lesson 20 also shows Retrofit).
+ * {@link HttpURLConnection} — no extra library needed (lesson 21 also shows Retrofit).
  */
 public final class FrankfurterRateService implements ExchangeRateService {
 

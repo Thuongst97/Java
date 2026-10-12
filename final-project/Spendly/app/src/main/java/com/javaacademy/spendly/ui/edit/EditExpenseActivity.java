@@ -51,7 +51,7 @@ public class EditExpenseActivity extends AppCompatActivity {
     private final Map<Category, Chip> chips = new EnumMap<>(Category.class);
     private boolean prefilled;
 
-    /** The only way to start this screen: keeps the extra's key private (lesson 17). */
+    /** The only way to start this screen: keeps the extra's key private (lesson 18). */
     public static Intent intent(Context context, long expenseId) {
         return new Intent(context, EditExpenseActivity.class).putExtra(EXTRA_ID, expenseId);
     }

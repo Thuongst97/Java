@@ -10,7 +10,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.concurrent.TimeUnit;
 
-/** Turns the daily reminder on or off with WorkManager (lesson 20). */
+/** Turns the daily reminder on or off with WorkManager (lesson 21). */
 public final class ReminderScheduler {
 
     private static final String WORK_NAME = "daily-expense-reminder";

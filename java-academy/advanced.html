@@ -94,10 +94,16 @@
             }
           </script>
           <p>Click the ▶ next to the class (or run <code>./gradlew :lessons:test</code>). Green bar = all good; a failure shows <em>expected</em> vs <em>actual</em> and a link to the line.</p>
+          <div class="callout tip">
+            <div class="ci">🧪</div>
+            <div><span class="ct">Step by step</span>
+              <p>The next lesson, <a href="unit-tests.html">17 · Unit Tests: Setup &amp; Run</a>, walks through the setup screen by screen — creating test classes, every way to run them, Gradle reports, coverage, Mockito, CI and fixes for the usual errors.</p>
+            </div>
+          </div>
           <div class="callout note">
             <div class="ci">🤖</div>
             <div><span class="ct">JUnit 4 on Android</span>
-              <p>Android app modules still use <b>JUnit 4</b> by default (<code>@Test</code> from <code>org.junit</code>, <code>@Before</code> instead of <code>@BeforeEach</code>, <code>@Rule</code>s). The ideas are identical — the final project's tests use JUnit 4 so they work with AndroidX test rules. Lesson 21 covers instrumented and UI tests.</p>
+              <p>Android app modules still use <b>JUnit 4</b> by default (<code>@Test</code> from <code>org.junit</code>, <code>@Before</code> instead of <code>@BeforeEach</code>, <code>@Rule</code>s). The ideas are identical — the final project's tests use JUnit 4 so they work with AndroidX test rules. Lesson 22 covers instrumented and UI tests.</p>
             </div>
           </div>
         </section>
@@ -230,7 +236,7 @@
           <div class="callout warn">
             <div class="ci">⚙️</div>
             <div><span class="ct">Reflection on Android</span>
-              <p>Reflection is slow-ish and bypasses compile-time checks. On Android, release builds are shrunk and obfuscated by <b>R8</b>, which renames or removes classes it thinks are unused — breaking code that finds them by name. That's why libraries like Room and Hilt generate code at <em>build time</em> with annotation processors instead, and why reflection-based libraries (e.g. Gson) need <code>-keep</code> rules (lesson 21).</p>
+              <p>Reflection is slow-ish and bypasses compile-time checks. On Android, release builds are shrunk and obfuscated by <b>R8</b>, which renames or removes classes it thinks are unused — breaking code that finds them by name. That's why libraries like Room and Hilt generate code at <em>build time</em> with annotation processors instead, and why reflection-based libraries (e.g. Gson) need <code>-keep</code> rules (lesson 22).</p>
             </div>
           </div>
         </section>
@@ -256,13 +262,13 @@
             <table class="t">
               <thead><tr><th>Pattern</th><th>Idea</th><th>Where you'll see it</th></tr></thead>
               <tbody>
-                <tr><td><b>Singleton</b></td><td>exactly one instance</td><td>the Room database, Retrofit client (lesson 20)</td></tr>
+                <tr><td><b>Singleton</b></td><td>exactly one instance</td><td>the Room database, Retrofit client (lesson 21)</td></tr>
                 <tr><td><b>Builder</b></td><td>step-by-step construction (lesson 09)</td><td><code>NotificationCompat.Builder</code>, <code>Room.databaseBuilder</code>, <code>AlertDialog.Builder</code></td></tr>
                 <tr><td><b>Factory</b></td><td>a method decides which object to create</td><td><code>ViewModelProvider.Factory</code>, <code>Intent</code> helpers</td></tr>
                 <tr><td><b>Strategy</b></td><td>swap an algorithm at runtime</td><td><code>Comparator</code>, <code>Interpolator</code>, <code>LayoutManager</code></td></tr>
                 <tr><td><b>Observer</b></td><td>notify subscribers of changes</td><td>click listeners, <code>LiveData</code>, <code>TextWatcher</code></td></tr>
                 <tr><td><b>Adapter</b></td><td>convert one interface into another</td><td><code>RecyclerView.Adapter</code>: your data → views</td></tr>
-                <tr><td><b>Repository / Facade</b></td><td>one simple API over complex subsystems</td><td>the data layer in lesson 19</td></tr>
+                <tr><td><b>Repository / Facade</b></td><td>one simple API over complex subsystems</td><td>the data layer in lesson 20</td></tr>
               </tbody>
             </table>
           </div>

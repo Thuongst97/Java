@@ -1,7 +1,7 @@
 # Spendly — Java Academy final project
 
 A production-style Android expense tracker written in **Java**, built step by step in
-[lesson 22](https://thuongst97.github.io/Java/final-project.html).
+[lesson 23](https://thuongst97.github.io/Java/final-project.html).
 
 **Features:** monthly overview with totals, per-category breakdown and daily average · search and
 category filters · add/edit with validation and a date picker · swipe to delete with Undo ·
@@ -33,4 +33,4 @@ app/src/main/java/com/javaacademy/spendly/
 
 Room exports its schema to `app/schemas/` on the first build — commit those JSON files so future
 migrations can be tested. For release signing, create a git-ignored `keystore.properties`
-(see lesson 21).
+(see lesson 22).

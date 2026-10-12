@@ -99,7 +99,7 @@
               </tbody>
             </table>
           </div>
-          <p>For large files, process one line at a time so memory stays constant — the same pattern reads an HTTP response on Android (lesson 20):</p>
+          <p>For large files, process one line at a time so memory stays constant — the same pattern reads an HTTP response on Android (lesson 21):</p>
           <script type="text/plain" data-code="java" data-file="LineByLine.java" data-run>
             import java.io.BufferedReader;
             import java.io.BufferedWriter;
@@ -285,8 +285,8 @@
           <ul>
             <li><b>No free file system</b>: an app may write freely only to its <b>private directories</b> — <code>context.getFilesDir()</code> (persistent) and <code>context.getCacheDir()</code> (may be cleared). They're deleted when the app is uninstalled.</li>
             <li><b>User documents</b> (downloads, photos) go through the Storage Access Framework or <code>MediaStore</code>, not raw paths.</li>
-            <li><b>Never do I/O on the main thread</b> — it freezes the UI and can trigger “Application Not Responding”. Lessons 15 and 19 show how to move work to a background thread.</li>
-            <li><b>Structured data</b> belongs in a database (Room, lesson 20) or preferences, not hand-rolled files.</li>
+            <li><b>Never do I/O on the main thread</b> — it freezes the UI and can trigger “Application Not Responding”. Lessons 15 and 20 show how to move work to a background thread.</li>
+            <li><b>Structured data</b> belongs in a database (Room, lesson 21) or preferences, not hand-rolled files.</li>
             <li><code>java.time</code> is built in from <b>API 26</b> (our <code>minSdk</code>). For older devices enable core library desugaring.</li>
           </ul>
           <script type="text/plain" data-code="java" data-file="NotesStore.java (Android)">

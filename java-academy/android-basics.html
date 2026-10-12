@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Android App Fundamentals — Java Academy</title>
+  <meta name="description" content="Android project anatomy, Gradle and version catalogs, Java versions on Android, the manifest, the Activity lifecycle, resources, intents and Logcat — in Java.">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="assets/css/main.css?v=__BUILD__">
+  <script>try{var t=localStorage.getItem("ja-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body data-page="android-basics">
+  <div id="site-header"></div>
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+      <div class="content-inner">
+
+        <header class="page-hero">
+          <nav class="crumbs"><a href="index.html">Home</a><span>/</span><span>Android with Java</span><span>/</span><span>Lesson 18</span></nav>
+          <div class="eyebrow">Lesson 18 · Android with Java</div>
+          <h1>Android App Fundamentals</h1>
+          <p class="lead">Time to put your Java on a phone. This lesson dissects an Android Studio project file by file — Gradle, the manifest, resources — and explains the Activity lifecycle, intents and Logcat: the foundations every later lesson builds on.</p>
+          <div class="page-meta"><span>⏱ 60 min</span><span>🎯 Intermediate</span><span>🧩 Prerequisite: lessons 01, 07–10</span></div>
+          <div class="objectives">
+            <h4>You will be able to</h4>
+            <ul>
+              <li>Navigate every file of an Android project</li>
+              <li>Read and change Gradle build scripts and the version catalog</li>
+              <li>Know which Java APIs work on which Android versions</li>
+              <li>Explain the Activity lifecycle and configuration changes</li>
+              <li>Use resources, qualifiers and the <code>R</code> class</li>
+              <li>Navigate with explicit and implicit intents</li>
+            </ul>
+          </div>
+        </header>
+
+        <section class="doc-section" id="anatomy" data-title="Project anatomy">
+          <div class="sec-head"><h2><span class="sec-num">18.1</span>Project anatomy</h2></div>
+          <p>Create a project with <b>New Project → Empty Views Activity → Language: Java</b> (lesson 01). Switch the Project tool window from <em>Android</em> view to <em>Project</em> view to see the real folders:</p>
+          <div class="filetree"><span class="d">HelloAndroid/</span>
+├── <span class="d">app/</span>                                <span class="c"># the application module</span>
+│   ├── build.gradle.kts                <span class="c"># how to build THIS module: SDK levels, dependencies</span>
+│   ├── proguard-rules.pro              <span class="c"># R8 shrinking rules for release builds</span>
+│   └── <span class="d">src/</span>
+│       ├── <span class="d">main/</span>
+│       │   ├── AndroidManifest.xml     <span class="c"># app identity, components, permissions</span>
+│       │   ├── <span class="d">java/com/example/helloandroid/</span>
+│       │   │   └── MainActivity.java   <span class="c"># your code (Java and Kotlin both live under java/)</span>
+│       │   └── <span class="d">res/</span>                    <span class="c"># resources: layouts, strings, images, themes…</span>
+│       │       ├── <span class="d">layout/</span>activity_main.xml
+│       │       ├── <span class="d">values/</span>strings.xml, colors.xml, themes.xml
+│       │       ├── <span class="d">values-night/</span>themes.xml  <span class="c"># dark-mode overrides</span>
+│       │       ├── <span class="d">drawable/</span>                <span class="c"># vector &amp; bitmap images</span>
+│       │       └── <span class="d">mipmap-*/</span>                <span class="c"># launcher icons</span>
+│       ├── <span class="d">test/</span>                       <span class="c"># JVM unit tests (fast)</span>
+│       └── <span class="d">androidTest/</span>                <span class="c"># instrumented tests (on a device)</span>
+├── <span class="d">gradle/</span>
+│   ├── libs.versions.toml              <span class="c"># version catalog: every dependency version in one place</span>
+│   └── <span class="d">wrapper/</span>                    <span class="c"># pins the Gradle version</span>
+├── build.gradle.kts                    <span class="c"># top-level: plugin versions</span>
+├── settings.gradle.kts                 <span class="c"># repositories + which modules exist</span>
+├── gradle.properties                   <span class="c"># Gradle/AndroidX flags</span>
+└── local.properties                    <span class="c"># sdk.dir — machine-specific, never commit</span></div>
+        </section>
+
+        <section class="doc-section" id="gradle" data-title="Gradle & the version catalog">
+          <div class="sec-head"><h2><span class="sec-num">18.2</span>Gradle and the version catalog</h2></div>
+          <p>Gradle compiles your Java, merges resources and manifests, runs annotation processors (Room), converts bytecode to DEX, and packages and signs the APK. Modern projects write build scripts in the <b>Kotlin DSL</b> (<code>.gradle.kts</code>) — you don't need to know Kotlin to read them. The module script is where you'll spend most time:</p>
+          <script type="text/plain" data-code="kts" data-file="app/build.gradle.kts" data-numbered>
+            plugins {
+                alias(libs.plugins.android.application)   // "libs" = gradle/libs.versions.toml
+            }
+
+            android {
+                namespace = "com.example.helloandroid"   // package of the generated R class
+                compileSdk = 36                           // which android.jar you compile against
+
+                defaultConfig {
+                    applicationId = "com.example.helloandroid"   // the app's unique ID on Google Play
+                    minSdk = 26                           // oldest Android version supported (8.0)
+                    targetSdk = 36                        // behaviour you've tested against
+                    versionCode = 1                       // integer, must increase with every release
+                    versionName = "1.0.0"                 // what users see
+                }
+
+                buildTypes {
+                    release {
+                        isMinifyEnabled = true            // R8: shrink + obfuscate (lesson 22)
+                        proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+                    }
+                }
+
+                compileOptions {
+                    sourceCompatibility = JavaVersion.VERSION_17   // Java language level //!
+                    targetCompatibility = JavaVersion.VERSION_17   //!
+                }
+
+                buildFeatures {
+                    viewBinding = true                    // type-safe access to views (lesson 19)
+                }
+            }
+
+            dependencies {
+                implementation(libs.androidx.appcompat)
+                implementation(libs.material)
+                implementation(libs.androidx.constraintlayout)
+                testImplementation(libs.junit)                       // only for src/test
+                androidTestImplementation(libs.androidx.espresso.core) // only for src/androidTest
+            }
+          </script>
+          <script type="text/plain" data-code="toml" data-file="gradle/libs.versions.toml">
+            [versions]
+            agp = "8.11.1"
+            appcompat = "1.7.0"
+            material = "1.12.0"
+
+            [libraries]
+            androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
+            material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+
+            [plugins]
+            android-application = { id = "com.android.application", version.ref = "agp" }
+          </script>
+          <ul>
+            <li>After editing a build file, click <b>Sync Now</b> (or the 🐘 elephant icon). Android Studio's <b>Build</b> tool window shows errors; the first red line is usually the real one.</li>
+            <li><b>implementation</b> = needed to compile and run the app; <b>testImplementation</b> / <b>androidTestImplementation</b> = tests only; <b>annotationProcessor</b> = a code generator that runs inside <code>javac</code> (Room uses it in lesson 21).</li>
+            <li>Dependencies come from <b>Google's Maven</b> (AndroidX, Material) and <b>Maven Central</b> — repositories declared in <code>settings.gradle.kts</code>.</li>
+            <li>Useful tasks in the Terminal: <code>./gradlew assembleDebug</code>, <code>installDebug</code>, <code>testDebugUnitTest</code>, <code>lintDebug</code>, <code>app:dependencies</code>.</li>
+          </ul>
+        </section>
+
+        <section class="doc-section" id="java-versions" data-title="Java versions on Android">
+          <div class="sec-head"><h2><span class="sec-num">18.3</span>Which Java can you use on Android?</h2></div>
+          <p>Two different questions hide here, and mixing them up crashes apps:</p>
+          <div class="grid grid-2">
+            <div class="glass card"><h4 class="c-green">Language features</h4><p class="small">Syntax like lambdas, <code>var</code>, switch expressions, text blocks, records and <code>instanceof</code> patterns. These are compiled away by <code>javac</code> and D8, so with <code>JavaVersion.VERSION_17</code> they work on <b>every</b> device your <code>minSdk</code> allows.</p></div>
+            <div class="glass card"><h4 class="c-amber">Library APIs</h4><p class="small">Methods of <code>java.*</code> classes, like <code>String.strip()</code> or <code>List.of()</code>. These must exist <b>in the phone's runtime</b>, which depends on its Android version — not on your JDK.</p></div>
+          </div>
+          <div class="table-wrap">
+            <table class="t">
+              <thead><tr><th>API</th><th>Java version</th><th>Available on Android from</th><th>minSdk 26 alternative</th></tr></thead>
+              <tbody>
+                <tr><td><code>java.time</code>, <code>Optional</code>, streams, lambdas' <code>java.util.function</code></td><td>8</td><td>API 24–26</td><td>— (fine)</td></tr>
+                <tr><td><code>List.of</code>, <code>Set.of</code>, <code>Map.of</code>, <code>List.copyOf</code></td><td>9–10</td><td>API 30</td><td><code>Arrays.asList</code>, <code>Collections.unmodifiableList(…)</code></td></tr>
+                <tr><td><code>String.strip</code>, <code>isBlank</code>, <code>repeat</code>, <code>lines</code></td><td>11</td><td>API 33</td><td><code>trim()</code>, <code>trim().isEmpty()</code></td></tr>
+                <tr><td><code>Stream.toList()</code>, <code>String.formatted</code></td><td>16–17</td><td>API 34</td><td><code>collect(Collectors.toList())</code>, <code>String.format</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>The code compiles either way — the crash (<code>NoSuchMethodError</code>) only happens on an older phone. Your safety nets:</p>
+          <ol>
+            <li><b>Android Lint</b> underlines such calls in the editor and fails <code>./gradlew lintDebug</code> with a <code>NewApi</code> error. Run it in CI — the Spendly project does.</li>
+            <li><b>Core library desugaring</b> backports many newer <code>java.*</code> APIs to old devices:</li>
+          </ol>
+          <script type="text/plain" data-code="kts" data-file="app/build.gradle.kts">
+            android {
+                compileOptions {
+                    isCoreLibraryDesugaringEnabled = true
+                }
+            }
+            dependencies {
+                coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
+            }
+          </script>
+          <div class="callout java">
+            <div class="ci">☕</div>
+            <div><span class="ct">Lessons 02–16 vs Android</span>
+              <p>The plain-Java lessons use Java 21 freely because they run on your desktop JDK. When writing Android code, keep the table above in mind — or just trust Lint, which knows every API's level.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="manifest" data-title="The manifest">
+          <div class="sec-head"><h2><span class="sec-num">18.4</span>The manifest</h2></div>
+          <p><code>AndroidManifest.xml</code> is the app's declaration to the operating system: which components exist, which one launches, which permissions are needed. Android can only start components listed here.</p>
+          <script type="text/plain" data-code="xml" data-file="app/src/main/AndroidManifest.xml" data-numbered>
+            <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+                <uses-permission android:name="android.permission.INTERNET" />   <!-- normal permission: granted at install -->
+
+                <application
+                    android:name=".HelloApp"
+                    android:icon="@mipmap/ic_launcher"
+                    android:label="@string/app_name"
+                    android:theme="@style/Theme.HelloAndroid">
+
+                    <activity
+                        android:name=".MainActivity"
+                        android:exported="true">            <!-- other apps (the launcher) may start it -->
+                        <intent-filter>
+                            <action android:name="android.intent.action.MAIN" />
+                            <category android:name="android.intent.category.LAUNCHER" />
+                        </intent-filter>
+                    </activity>
+
+                    <activity
+                        android:name=".DetailActivity"
+                        android:exported="false"
+                        android:parentActivityName=".MainActivity" />
+                </application>
+            </manifest>
+          </script>
+          <p class="small muted">The four component types are <b>Activity</b> (a screen), <b>Service</b> (background work without UI), <b>BroadcastReceiver</b> (reacts to system events) and <b>ContentProvider</b> (shares data). Most apps are mostly activities; WorkManager (lesson 21) replaces most services.</p>
+        </section>
+
+        <section class="doc-section" id="lifecycle" data-title="The Activity lifecycle">
+          <div class="sec-head"><h2><span class="sec-num">18.5</span>The Activity lifecycle</h2></div>
+          <p>You never call <code>new MainActivity()</code>. Android creates activities and calls <b>lifecycle methods</b> as the user moves around — and may destroy them at any time to save memory or when the configuration changes (rotation, dark mode, language).</p>
+          <figure class="diagram">
+            <svg viewBox="0 0 720 220" width="720" role="img" aria-label="Activity lifecycle: onCreate, onStart, onResume, running, onPause, onStop, onDestroy">
+              <defs><marker id="al" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#3ddc84"/></marker></defs>
+              <g font-family="JetBrains Mono, monospace" font-size="12" text-anchor="middle">
+                <rect x="10" y="30" width="110" height="40" rx="8" fill="rgba(61,220,132,.12)" stroke="#3ddc84"/><text x="65" y="55" fill="currentColor">onCreate</text>
+                <rect x="160" y="30" width="110" height="40" rx="8" fill="rgba(61,220,132,.12)" stroke="#3ddc84"/><text x="215" y="55" fill="currentColor">onStart</text>
+                <rect x="310" y="30" width="110" height="40" rx="8" fill="rgba(61,220,132,.12)" stroke="#3ddc84"/><text x="365" y="55" fill="currentColor">onResume</text>
+                <rect x="460" y="20" width="250" height="60" rx="10" fill="rgba(248,152,32,.14)" stroke="#f89820"/><text x="585" y="46" fill="currentColor" font-family="Inter, sans-serif" font-weight="700">RUNNING</text><text x="585" y="66" fill="#9a98a8" font-family="Inter, sans-serif">visible &amp; interactive</text>
+                <rect x="460" y="150" width="110" height="40" rx="8" fill="rgba(108,184,255,.12)" stroke="#6cb8ff"/><text x="515" y="175" fill="currentColor">onPause</text>
+                <rect x="310" y="150" width="110" height="40" rx="8" fill="rgba(108,184,255,.12)" stroke="#6cb8ff"/><text x="365" y="175" fill="currentColor">onStop</text>
+                <rect x="160" y="150" width="110" height="40" rx="8" fill="rgba(255,107,122,.12)" stroke="#ff6b7a"/><text x="215" y="175" fill="currentColor">onDestroy</text>
+                <path d="M120 50H156M270 50H306M420 50H456" stroke="#3ddc84" stroke-width="2" marker-end="url(#al)"/>
+                <path d="M515 80V146" stroke="#3ddc84" stroke-width="2" marker-end="url(#al)"/>
+                <path d="M460 170H424M310 170H274" stroke="#3ddc84" stroke-width="2" marker-end="url(#al)"/>
+                <path d="M365 150V74" stroke="#3ddc84" stroke-width="2" stroke-dasharray="4 4" marker-end="url(#al)"/>
+                <text x="420" y="118" fill="#9a98a8" font-family="Inter, sans-serif" font-size="11">back to the app (onRestart → onStart)</text>
+                <text x="600" y="128" fill="#9a98a8" font-family="Inter, sans-serif" font-size="11">another screen on top</text>
+              </g>
+            </svg>
+            <figcaption>Visible lifetime: onStart → onStop. Foreground (interactive) lifetime: onResume → onPause.</figcaption>
+          </figure>
+          <script type="text/plain" data-code="java" data-file="MainActivity.java" data-numbered>
+            public class MainActivity extends AppCompatActivity {
+                private static final String TAG = "MainActivity";
+                private static final String KEY_COUNT = "count";
+                private int count;
+
+                @Override
+                protected void onCreate(Bundle savedInstanceState) {
+                    super.onCreate(savedInstanceState);              // always call super first
+                    setContentView(R.layout.activity_main);
+                    if (savedInstanceState != null) {
+                        count = savedInstanceState.getInt(KEY_COUNT); // restore after rotation / process death
+                    }
+                    Log.d(TAG, "onCreate, count=" + count);
+                }
+
+                @Override protected void onStart()  { super.onStart();  Log.d(TAG, "onStart"); }
+                @Override protected void onResume() { super.onResume(); Log.d(TAG, "onResume"); }
+                @Override protected void onPause()  { super.onPause();  Log.d(TAG, "onPause"); }
+                @Override protected void onStop()   { super.onStop();   Log.d(TAG, "onStop"); }
+                @Override protected void onDestroy(){ super.onDestroy(); Log.d(TAG, "onDestroy"); }
+
+                @Override
+                protected void onSaveInstanceState(@NonNull Bundle outState) {
+                    super.onSaveInstanceState(outState);
+                    outState.putInt(KEY_COUNT, count);                // small UI state only
+                }
+            }
+          </script>
+          <script type="text/plain" data-output="Logcat — rotating the phone">
+            D/MainActivity: onPause
+            D/MainActivity: onStop
+            D/MainActivity: onDestroy
+            D/MainActivity: onCreate, count=3
+            D/MainActivity: onStart
+            D/MainActivity: onResume
+          </script>
+          <div class="callout danger">
+            <div class="ci">🔄</div>
+            <div><span class="ct">Rotation destroys your Activity</span>
+              <p>Every field of the old Activity object is gone. Small UI state survives via <code>onSaveInstanceState</code>; screen data should live in a <b>ViewModel</b>, which survives configuration changes (lesson 20). Views with an <code>android:id</code> (like <code>EditText</code>) save their own text automatically.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="resources" data-title="Resources & the R class">
+          <div class="sec-head"><h2><span class="sec-num">18.6</span>Resources and the <code>R</code> class</h2></div>
+          <p>Never hard-code user-visible text, colours or sizes in Java. Put them in <code>res/</code>; the build generates the <code>R</code> class with an <code>int</code> ID for each. Android picks the best variant at runtime using <b>qualifiers</b> in folder names.</p>
+          <script type="text/plain" data-code="xml" data-file="res/values/strings.xml">
+            <resources>
+                <string name="app_name">Spendly</string>
+                <string name="greeting">Hello, %1$s!</string>             <!-- format argument -->
+                <plurals name="expense_count">
+                    <item quantity="one">%d expense</item>
+                    <item quantity="other">%d expenses</item>
+                </plurals>
+                <string-array name="currencies">
+                    <item>USD</item>
+                    <item>EUR</item>
+                </string-array>
+            </resources>
+          </script>
+          <script type="text/plain" data-code="java" data-file="Using resources">
+            String hello = getString(R.string.greeting, "Ada");                       // "Hello, Ada!"
+            String count = getResources().getQuantityString(R.plurals.expense_count, 3, 3);  // "3 expenses"
+            String[] codes = getResources().getStringArray(R.array.currencies);
+            int color = ContextCompat.getColor(this, R.color.brand);
+            Drawable icon = ContextCompat.getDrawable(this, R.drawable.ic_add);
+          </script>
+          <div class="table-wrap">
+            <table class="t">
+              <thead><tr><th>Folder</th><th>Used when…</th></tr></thead>
+              <tbody>
+                <tr><td><code>values-vi/strings.xml</code></td><td>the device language is Vietnamese</td></tr>
+                <tr><td><code>values-night/themes.xml</code></td><td>dark mode is on</td></tr>
+                <tr><td><code>layout-land/</code></td><td>landscape orientation</td></tr>
+                <tr><td><code>values-sw600dp/</code></td><td>the smallest screen width is ≥ 600 dp (tablets)</td></tr>
+                <tr><td><code>drawable-v31/</code></td><td>Android 12 (API 31) and newer</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="small muted">Sizes use <b>dp</b> (density-independent pixels) for layout and <b>sp</b> (scales with the user's font size) for text — never raw <code>px</code>.</p>
+        </section>
+
+        <section class="doc-section" id="intents" data-title="Intents">
+          <div class="sec-head"><h2><span class="sec-num">18.7</span>Intents: moving between screens and apps</h2></div>
+          <p>An <code>Intent</code> is a message asking Android to start a component. <b>Explicit</b> intents name the class; <b>implicit</b> intents describe an action and let the system pick an app.</p>
+          <script type="text/plain" data-code="java" data-file="DetailActivity.java">
+            public class DetailActivity extends AppCompatActivity {
+                private static final String EXTRA_ID = "expense_id";
+
+                /** Callers use this instead of building the Intent themselves: the extra's key stays private. */
+                public static Intent intent(Context context, long expenseId) {
+                    return new Intent(context, DetailActivity.class).putExtra(EXTRA_ID, expenseId);
+                }
+
+                @Override
+                protected void onCreate(Bundle savedInstanceState) {
+                    super.onCreate(savedInstanceState);
+                    long id = getIntent().getLongExtra(EXTRA_ID, -1);   // default if missing
+                }
+            }
+
+            // From MainActivity:
+            startActivity(DetailActivity.intent(this, 42));
+          </script>
+          <script type="text/plain" data-code="java" data-file="Implicit intents">
+            // Open a web page in the user's browser
+            startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://dev.java")));
+
+            // Share text with any app that accepts it (messages, mail, notes…)
+            Intent send = new Intent(Intent.ACTION_SEND)
+                    .setType("text/plain")
+                    .putExtra(Intent.EXTRA_TEXT, "I spent $12.50 on coffee this week ☕");
+            startActivity(Intent.createChooser(send, "Share via"));
+          </script>
+          <p>To get a <b>result</b> back (a picked photo, a permission decision), register a launcher with the <b>Activity Result API</b> — Spendly's settings screen asks for the notification permission this way:</p>
+          <script type="text/plain" data-code="java" data-file="SettingsActivity.java">
+            private final ActivityResultLauncher<String> notificationPermission =
+                    registerForActivityResult(new ActivityResultContracts.RequestPermission(), granted -> {
+                        if (granted) enableReminder();
+                        else showExplanation();
+                    });
+
+            // later, e.g. when a switch is turned on:
+            notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS);
+          </script>
+        </section>
+
+        <section class="doc-section" id="logcat" data-title="Logcat, Toast & Context">
+          <div class="sec-head"><h2><span class="sec-num">18.8</span>Logcat, Toast and Context</h2></div>
+          <ul>
+            <li><b>Logcat</b> (bottom tool window) shows logs from the device. Write with <code>Log.d(TAG, "msg")</code> (debug), <code>Log.i</code>, <code>Log.w</code>, <code>Log.e(TAG, "msg", exception)</code>. Filter with <code>package:mine level:debug tag:MainActivity</code>. Crashes appear as <code>FATAL EXCEPTION</code> with a clickable stack trace.</li>
+            <li><b>Toast</b> — a short message: <code>Toast.makeText(this, R.string.saved, Toast.LENGTH_SHORT).show();</code>. For messages with an action (Undo), use a Material <code>Snackbar</code> (lesson 19).</li>
+            <li><b>Context</b> is your handle to the system: resources, preferences, starting activities, system services. An <code>Activity</code> is a Context tied to one screen; <code>getApplicationContext()</code> lives as long as the process. Pass the <em>application</em> context to anything long-lived (databases, repositories) to avoid leaking screens.</li>
+            <li>A custom <b>Application</b> subclass (declared with <code>android:name</code> in the manifest) is created once per process before any activity — the right place to build app-wide objects such as the database. Spendly's <code>SpendlyApp</code> does exactly that.</li>
+          </ul>
+        </section>
+
+        <section class="doc-section" id="exercises" data-title="Exercises">
+          <div class="sec-head"><h2><span class="sec-num">18.9</span>Exercises</h2></div>
+          <details class="exercise">
+            <summary>Exercise 1 — Lifecycle detective <span class="badge green">Easy</span></summary>
+            <div class="ex-body">
+              <p>Add the logging lifecycle methods above to your HelloAndroid app. Predict, then verify in Logcat, the callbacks for: pressing Home; returning; rotating; pressing Back. Which sequence differs between rotation and Back?</p>
+              <p class="small muted">Home: onPause → onStop. Return: onRestart → onStart → onResume. Rotation: onPause → onStop → onDestroy → onCreate → onStart → onResume. Back: onPause → onStop → onDestroy (no onCreate: the user left).</p>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 2 — A counter that survives rotation <span class="badge blue">Medium</span></summary>
+            <div class="ex-body">
+              <p>Add a button that increments a counter shown in a <code>TextView</code>. Rotate the phone: the count resets. Fix it with <code>onSaveInstanceState</code>, then test “Don't keep activities” in Developer options.</p>
+              <script type="text/plain" data-code="java" data-file="Solution — MainActivity.java">
+                public class MainActivity extends AppCompatActivity {
+                    private static final String KEY_COUNT = "count";
+                    private int count;
+                    private TextView label;
+
+                    @Override
+                    protected void onCreate(Bundle savedInstanceState) {
+                        super.onCreate(savedInstanceState);
+                        setContentView(R.layout.activity_main);
+                        label = findViewById(R.id.count_label);
+                        if (savedInstanceState != null) count = savedInstanceState.getInt(KEY_COUNT);
+                        render();
+                        findViewById(R.id.plus_button).setOnClickListener(v -> { count++; render(); });
+                    }
+
+                    private void render() {
+                        label.setText(getResources().getQuantityString(R.plurals.taps, count, count));
+                    }
+
+                    @Override
+                    protected void onSaveInstanceState(@NonNull Bundle outState) {
+                        super.onSaveInstanceState(outState);
+                        outState.putInt(KEY_COUNT, count);
+                    }
+                }
+              </script>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 3 — Translate the app <span class="badge amber">Challenge</span></summary>
+            <div class="ex-body">
+              <p>Move every hard-coded string into <code>strings.xml</code> (Android Studio: <kbd>Alt</kbd>+<kbd>Enter</kbd> → <em>Extract string resource</em>). Then open <b>Translations Editor</b>, add Vietnamese, translate, and switch the emulator's language to check. Which file did the editor create?</p>
+              <p class="small muted"><code>res/values-vi/strings.xml</code>. Missing translations fall back to <code>values/strings.xml</code>.</p>
+            </div>
+          </details>
+        </section>
+
+        <section class="doc-section" id="quiz" data-title="Quiz">
+          <div class="sec-head"><h2><span class="sec-num">18.10</span>Quiz</h2></div>
+          <script type="application/json" data-quiz>
+          [
+            {"q": "Your app has `minSdk 26` and calls `\"  hi \".strip()`. What happens on an Android 10 phone?", "options": ["It works — the project compiles with JDK 17", "It crashes with NoSuchMethodError, because String.strip() exists on Android only from API 33", "The compiler rejects it", "Android Studio translates it to trim()"], "answer": 1, "explain": "Library APIs must exist in the device's runtime. Lint's NewApi check catches this; use trim() or core library desugaring."},
+            {"q": "What does `applicationId` determine?", "options": ["The Java package of your classes", "The unique identity of the app on the device and on Google Play", "The R class package", "The app's display name"], "answer": 1, "explain": "applicationId must be unique and never change after publishing. `namespace` controls the R/BuildConfig package."},
+            {"q": "Which lifecycle method is guaranteed to be called first when an Activity is created?", "options": ["onStart", "onResume", "onCreate", "onRestart"], "answer": 2, "explain": "onCreate is where you inflate the layout and set up the screen."},
+            {"q": "Where should a translated French string go?", "options": ["`res/values/strings_fr.xml`", "`res/values-fr/strings.xml`", "`res/fr/values.xml`", "In Java code with an if"], "answer": 1, "explain": "Resource qualifiers are folder suffixes; Android chooses the folder matching the device configuration."},
+            {"q": "Why pass `getApplicationContext()` instead of an Activity to a long-lived repository?", "options": ["It's faster", "An Activity reference would keep the whole screen in memory after it's destroyed (a leak)", "Activities can't access files", "It's required by Room"], "answer": 1, "explain": "The application context lives as long as the process, so holding it never leaks a screen."}
+          ]
+          </script>
+        </section>
+
+        <section class="doc-section" id="references" data-title="Further reading">
+          <div class="sec-head"><h2><span class="sec-num">18.11</span>Further reading</h2></div>
+          <ul>
+            <li><a href="https://developer.android.com/guide/components/fundamentals" target="_blank" rel="noopener">Application fundamentals</a></li>
+            <li><a href="https://developer.android.com/build" target="_blank" rel="noopener">Configure your build</a> · <a href="https://developer.android.com/build/migrate-to-catalogs" target="_blank" rel="noopener">Version catalogs</a></li>
+            <li><a href="https://developer.android.com/guide/components/activities/activity-lifecycle" target="_blank" rel="noopener">The activity lifecycle</a></li>
+            <li><a href="https://developer.android.com/studio/write/java8-support" target="_blank" rel="noopener">Java 8+ APIs and desugaring</a></li>
+          </ul>
+        </section>
+
+        <div id="pager"></div>
+      </div>
+    </main>
+  </div>
+  <div id="site-footer"></div>
+  <script src="assets/js/core.js?v=__BUILD__"></script>
+</body>
+</html>

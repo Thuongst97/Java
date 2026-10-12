@@ -11,7 +11,7 @@ import com.javaacademy.spendly.ui.list.ExpenseListViewModel;
 /**
  * Tells {@link ViewModelProvider} how to construct our ViewModels, whose constructors take
  * dependencies. The provider calls this only when no ViewModel exists yet for the screen, so
- * the same instance survives rotation (lesson 19).
+ * the same instance survives rotation (lesson 20).
  */
 public final class ViewModelFactory implements ViewModelProvider.Factory {
 

@@ -5,7 +5,7 @@ plugins {
     alias(libs.plugins.room)
 }
 
-// Release signing secrets live in keystore.properties, which is git-ignored (see lesson 21).
+// Release signing secrets live in keystore.properties, which is git-ignored (see lesson 22).
 val keystoreProperties = Properties().apply {
     val file = rootProject.file("keystore.properties")
     if (file.exists()) file.inputStream().use { load(it) }
@@ -56,7 +56,7 @@ android {
     }
 
     buildFeatures {
-        viewBinding = true      // generates ActivityMainBinding etc. from layouts (lesson 18)
+        viewBinding = true      // generates ActivityMainBinding etc. from layouts (lesson 19)
         buildConfig = true
     }
 

@@ -17,7 +17,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-/** A UI smoke test with Espresso (lesson 21). */
+/** A UI smoke test with Espresso (lesson 22). */
 @RunWith(AndroidJUnit4.class)
 public class MainActivityTest {
 

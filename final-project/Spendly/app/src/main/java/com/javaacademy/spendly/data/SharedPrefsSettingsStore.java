@@ -11,7 +11,7 @@ import com.javaacademy.spendly.domain.ThemeMode;
 
 /**
  * {@link SettingsStore} backed by {@link SharedPreferences}: a tiny key-value file, perfect for a
- * handful of preferences (lesson 20). Reads are fast enough for the main thread; writes use
+ * handful of preferences (lesson 21). Reads are fast enough for the main thread; writes use
  * {@code apply()}, which commits to disk asynchronously.
  */
 public final class SharedPrefsSettingsStore implements SettingsStore {

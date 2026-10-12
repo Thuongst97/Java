@@ -24,7 +24,7 @@
           <nav class="crumbs"><a href="index.html">Home</a><span>/</span><span>Getting Started</span><span>/</span><span>Lesson 01</span></nav>
           <div class="eyebrow">Lesson 01 · Getting Started</div>
           <h1>Toolkit: JDK &amp; Android Studio</h1>
-          <p class="lead">This whole course runs inside <b>Android Studio</b>. In this lesson you install it, discover the JDK hidden inside it, create a workspace where you can run plain Java programs for lessons 02–16, and wire up the Android SDK, an emulator and a real phone for lessons 17–22.</p>
+          <p class="lead">This whole course runs inside <b>Android Studio</b>. In this lesson you install it, discover the JDK hidden inside it, create a workspace where you can run plain Java programs for lessons 02–16, and wire up the Android SDK, an emulator and a real phone for lessons 18–23.</p>
           <div class="page-meta"><span>⏱ ~60 min (mostly downloads)</span><span>🎯 Beginner</span><span>💻 Windows · macOS · Linux</span></div>
           <div class="objectives">
             <h4>You will be able to</h4>
@@ -54,9 +54,9 @@
               <tbody>
                 <tr><td><b>Android Studio</b></td><td>Google's official IDE for Android, built on IntelliJ IDEA. Excellent Java editor, debugger and profiler.</td><td>Everything in this course.</td></tr>
                 <tr><td><b>JDK</b> (Java Development Kit)</td><td>The compiler <code>javac</code>, the <b>JVM</b> that runs bytecode, the standard library and tools like <code>jshell</code>. Android Studio <b>bundles one</b> (the JetBrains Runtime, “JBR”).</td><td>Compiling and running Java; running Gradle.</td></tr>
-                <tr><td><b>Android SDK</b></td><td>Platform libraries (<code>android.jar</code>), build tools, <code>adb</code>, emulator images.</td><td>Lessons 17–22.</td></tr>
+                <tr><td><b>Android SDK</b></td><td>Platform libraries (<code>android.jar</code>), build tools, <code>adb</code>, emulator images.</td><td>Lessons 18–23.</td></tr>
                 <tr><td><b>Gradle</b></td><td>The build system. Downloaded automatically by the Gradle Wrapper (<code>gradlew</code>) in every project.</td><td>Every project.</td></tr>
-                <tr><td><b>Emulator / device</b></td><td>Where your Android app runs.</td><td>Lessons 17–22.</td></tr>
+                <tr><td><b>Emulator / device</b></td><td>Where your Android app runs.</td><td>Lessons 18–23.</td></tr>
                 <tr><td><b>▶ Run on this site</b></td><td>Every runnable example can be edited and executed in your browser on a real JDK (via the free Compiler Explorer service).</td><td>Quick experiments, zero install.</td></tr>
               </tbody>
             </table>
@@ -84,7 +84,7 @@
             </table>
           </div>
           <h3>Check that hardware virtualization is enabled</h3>
-          <p>The emulator runs a whole virtual phone; without hardware acceleration it is unusably slow. (Plain Java lessons don't need this — only lessons 17+.)</p>
+          <p>The emulator runs a whole virtual phone; without hardware acceleration it is unusably slow. (Plain Java lessons don't need this — only lessons 18+.)</p>
           <div class="tabs" data-group="os">
             <div class="tab-list"><button data-tab="win">🪟 Windows</button><button data-tab="mac">🍎 macOS</button><button data-tab="linux">🐧 Linux</button></div>
             <div class="tab-panel" data-panel="win">
@@ -235,13 +235,13 @@
           </script>
           <p class="small muted">On this website the example omits the <code>package</code> line so it can run in the browser. In Android Studio keep the <code>package com.example.lessons;</code> line the IDE generated at the top of each file — it must match the folder the file lives in.</p>
           <div class="filetree"><span class="d">JavaAcademy/</span>
-├── <span class="d">app/</span>                         <span class="c"># an (empty) Android app module — used from lesson 17</span>
+├── <span class="d">app/</span>                         <span class="c"># an (empty) Android app module — used from lesson 18</span>
 ├── <span class="d">lessons/</span>                     <span class="c"># ← plain Java: lessons 02–16</span>
 │   ├── build.gradle.kts         <span class="c"># java-library plugin, Java 21</span>
 │   └── <span class="d">src/main/java/com/example/lessons/</span>
 │       ├── Main.java
 │       └── <span class="d">l03/</span> Variables.java …    <span class="c"># one package per lesson keeps things tidy</span>
-├── <span class="d">gradle/</span>libs.versions.toml     <span class="c"># version catalog (lesson 17)</span>
+├── <span class="d">gradle/</span>libs.versions.toml     <span class="c"># version catalog (lesson 18)</span>
 ├── settings.gradle.kts          <span class="c"># include(":app", ":lessons")</span>
 └── gradlew / gradlew.bat        <span class="c"># Gradle wrapper</span></div>
           <div class="callout tip">
@@ -406,7 +406,7 @@
                 }
             }
           </script>
-          <p>Don't worry about understanding this yet — lesson 17 dissects every file of an Android project and lesson 18 builds real screens.</p>
+          <p>Don't worry about understanding this yet — lesson 18 dissects every file of an Android project and lesson 19 builds real screens.</p>
         </section>
 
         <section class="doc-section" id="productivity" data-title="IDE productivity">
@@ -512,7 +512,7 @@
             {"q": "Do you need to install a separate JDK to write Java in Android Studio?", "options": ["Yes, Android Studio refuses to start without one", "No — Android Studio bundles the JetBrains Runtime (a JDK 21 build) and Gradle uses it", "No, because Android apps don't use Java", "Only on macOS"], "answer": 1, "explain": "The bundled JBR is a full JDK. A standalone JDK is optional — handy for using `java` in any terminal."},
             {"q": "Which tool turns `Hello.java` into `Hello.class`?", "options": ["`java`", "`javac`", "`jshell`", "`adb`"], "answer": 1, "explain": "`javac` compiles source to bytecode; `java` runs bytecode on the JVM (or, since Java 11, can compile-and-run a single source file)."},
             {"q": "Which Android Studio module type should hold plain Java programs with `main` methods?", "options": ["Phone & Tablet module", "Java or Kotlin Library module", "Wear OS module", "Baseline Profile module"], "answer": 1, "explain": "A Java library module uses Gradle's `java-library` plugin — no Android framework, just the JDK — so its classes can run directly on the JVM."},
-            {"q": "Why must you choose an *Empty Views Activity* template for a Java app?", "options": ["Views templates are faster", "The default Empty Activity template uses Jetpack Compose, which requires Kotlin", "Java can't use XML", "Views are deprecated"], "answer": 1, "explain": "Compose is a Kotlin compiler plugin. Android's View system works great from Java and is what lessons 17–22 use."},
+            {"q": "Why must you choose an *Empty Views Activity* template for a Java app?", "options": ["Views templates are faster", "The default Empty Activity template uses Jetpack Compose, which requires Kotlin", "Java can't use XML", "Views are deprecated"], "answer": 1, "explain": "Compose is a Kotlin compiler plugin. Android's View system works great from Java and is what lessons 18–23 use."},
             {"q": "What does `minSdk` control?", "options": ["Which APIs you compile against", "The oldest Android version that can install the app", "The Java version", "The emulator's RAM"], "answer": 1, "explain": "`compileSdk` = APIs you can call, `minSdk` = oldest supported device, `targetSdk` = behaviour you've tested against."}
           ]
           </script>

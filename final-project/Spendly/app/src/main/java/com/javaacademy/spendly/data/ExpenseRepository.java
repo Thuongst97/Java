@@ -8,7 +8,7 @@ import java.util.List;
 
 /**
  * The single source of truth for expenses. The UI depends on this interface, not on Room,
- * so tests can substitute an in-memory fake (lesson 19).
+ * so tests can substitute an in-memory fake (lesson 20).
  */
 public interface ExpenseRepository {
 

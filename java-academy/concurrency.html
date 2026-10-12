@@ -322,8 +322,8 @@
           <ul>
             <li>Block the main thread for ~5 seconds and Android shows <b>“App isn't responding” (ANR)</b>. Network on the main thread throws <code>NetworkOnMainThreadException</code> immediately.</li>
             <li>Updating a <code>View</code> from a background thread throws <code>CalledFromWrongThreadException</code>.</li>
-            <li>The modern Java pattern: a background <code>ExecutorService</code> in your repository, results delivered with <code>LiveData.postValue()</code> (lesson 19), which the UI observes on the main thread.</li>
-            <li><code>AsyncTask</code> is deprecated — don't use it. For work that must survive the app closing (sync, reminders), use <b>WorkManager</b> (lesson 20).</li>
+            <li>The modern Java pattern: a background <code>ExecutorService</code> in your repository, results delivered with <code>LiveData.postValue()</code> (lesson 20), which the UI observes on the main thread.</li>
+            <li><code>AsyncTask</code> is deprecated — don't use it. For work that must survive the app closing (sync, reminders), use <b>WorkManager</b> (lesson 21).</li>
           </ul>
           <script type="text/plain" data-code="java" data-file="MainActivity.java (Android)">
             private final ExecutorService io = Executors.newSingleThreadExecutor();

@@ -9,7 +9,7 @@ import java.util.stream.Collectors;
 
 /**
  * Everything the list screen shows, computed from all expenses + the selected month + the filter.
- * A pure function of its inputs, so it's trivial to unit-test (lesson 19: unidirectional data flow).
+ * A pure function of its inputs, so it's trivial to unit-test (lesson 20: unidirectional data flow).
  *
  * @param items   the month's expenses that match the filter, newest first
  * @param summary totals for the whole month (unfiltered)

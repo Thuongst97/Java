@@ -6,7 +6,7 @@ import androidx.room.Database;
 import androidx.room.Room;
 import androidx.room.RoomDatabase;
 
-/** The Room database. Version 1; future schema changes need a Migration (lesson 20). */
+/** The Room database. Version 1; future schema changes need a Migration (lesson 21). */
 @Database(entities = {ExpenseEntity.class}, version = 1, exportSchema = true)
 public abstract class SpendlyDatabase extends RoomDatabase {
 

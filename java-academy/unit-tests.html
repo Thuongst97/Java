@@ -1,0 +1,528 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Unit Tests: Setup &amp; Run in Android Studio — Java Academy</title>
+  <meta name="description" content="Set up and run unit tests in Android Studio: JUnit 5 in a Java module, JUnit 4 in an Android app, running from the IDE and Gradle, reports, coverage, Mockito and CI.">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="assets/css/main.css?v=__BUILD__">
+  <script>try{var t=localStorage.getItem("ja-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body data-page="unit-tests">
+  <div id="site-header"></div>
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+      <div class="content-inner">
+
+        <header class="page-hero">
+          <nav class="crumbs"><a href="index.html">Home</a><span>/</span><span>Advanced Java</span><span>/</span><span>Lesson 17</span></nav>
+          <div class="eyebrow">Lesson 17 · Advanced Java</div>
+          <h1>Unit Tests: Setup &amp; Run in Android Studio</h1>
+          <p class="lead">A hands-on guide to automated testing in Android Studio: add JUnit to a plain Java module and to an Android app, write your first tests, run them every way the IDE and Gradle allow, read the results and reports, measure coverage, mock dependencies, and run everything automatically on every push.</p>
+          <div class="page-meta"><span>⏱ 50 min</span><span>🎯 Advanced</span><span>🧩 Prerequisite: lessons 01 and 16</span></div>
+          <div class="objectives">
+            <h4>You will be able to</h4>
+            <ul>
+              <li>Set up JUnit 5 in a Java module and JUnit 4 in an app module</li>
+              <li>Create tests with <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>T</kbd></li>
+              <li>Run one test, a class, a package or everything</li>
+              <li>Run tests with Gradle and read the HTML reports</li>
+              <li>Measure code coverage and mock with Mockito</li>
+              <li>Run tests in CI and fix the usual setup errors</li>
+            </ul>
+          </div>
+        </header>
+
+        <section class="doc-section" id="kinds" data-title="Kinds of tests">
+          <div class="sec-head"><h2><span class="sec-num">17.1</span>Which tests, where?</h2></div>
+          <p>Think of tests as a pyramid: many fast <b>unit tests</b> at the bottom, fewer slower integration tests, and a handful of end-to-end UI tests at the top. In an Android Studio project they live in two different source sets:</p>
+          <div class="table-wrap">
+            <table class="t">
+              <thead><tr><th></th><th>Local unit tests</th><th>Instrumented tests</th></tr></thead>
+              <tbody>
+                <tr><td>Folder</td><td><code>src/test/java</code></td><td><code>src/androidTest/java</code> (app modules only)</td></tr>
+                <tr><td>Runs on</td><td>your computer's JVM</td><td>an emulator or a phone</td></tr>
+                <tr><td>Speed</td><td>milliseconds per test</td><td>seconds; needs a device</td></tr>
+                <tr><td>Can use Android framework?</td><td>No (stubs only)</td><td>Yes — real Room, Views, Context</td></tr>
+                <tr><td>Use for</td><td>domain logic, ViewModels, mappers, parsers</td><td>databases, UI flows (Espresso)</td></tr>
+                <tr><td>Gradle dependency</td><td><code>testImplementation</code></td><td><code>androidTestImplementation</code></td></tr>
+                <tr><td>Run with</td><td><code>./gradlew test</code> / <code>testDebugUnitTest</code></td><td><code>./gradlew connectedDebugAndroidTest</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>This lesson focuses on local unit tests — the ones you'll write and run dozens of times a day. Lesson 22 goes deeper into instrumented and UI tests.</p>
+        </section>
+
+        <section class="doc-section" id="setup-java" data-title="Setup A: a Java module (JUnit 5)">
+          <div class="sec-head"><h2><span class="sec-num">17.2</span>Setup A — the plain Java <code>lessons</code> module (JUnit 5)</h2></div>
+          <p>Your <code>lessons</code> module from lesson 01 uses Gradle's <code>java-library</code> plugin, so it can use <b>JUnit 5 (Jupiter)</b>, the current generation of JUnit.</p>
+          <ol class="steps">
+            <li><b>Add the dependencies</b>Open <code>lessons/build.gradle.kts</code> and add the block below. The <b>BOM</b> (bill of materials) keeps all JUnit artifacts on the same version.</li>
+            <li><b>Tell Gradle to use the JUnit Platform</b>Without <code>useJUnitPlatform()</code>, Gradle silently finds <em>no tests</em>.</li>
+            <li><b>Sync</b>Click <b>Sync Now</b> in the yellow banner and wait for the 🐘 to finish.</li>
+            <li><b>Create the test folder</b>Right-click <code>lessons/src</code> → <b>New → Directory</b> → choose <code>test/java</code> from the suggestions. It turns green: a test source root.</li>
+          </ol>
+          <script type="text/plain" data-code="kts" data-file="lessons/build.gradle.kts" data-numbered>
+            plugins {
+                id("java-library")
+            }
+
+            java {
+                sourceCompatibility = JavaVersion.VERSION_21
+                targetCompatibility = JavaVersion.VERSION_21
+            }
+
+            dependencies {
+                testImplementation(platform("org.junit:junit-bom:5.11.4"))     //+
+                testImplementation("org.junit.jupiter:junit-jupiter")           //+ API + engine + params
+                testRuntimeOnly("org.junit.platform:junit-platform-launcher")   //+ needed by Gradle 9+
+                testImplementation("org.mockito:mockito-core:5.14.2")           //+ optional: mocks (17.8)
+            }
+
+            tasks.test {                                                        //+
+                useJUnitPlatform()                                              //+ run JUnit 5 tests
+                testLogging { events("passed", "skipped", "failed") }           //+ show results in the console
+            }                                                                   //+
+          </script>
+          <div class="callout tip">
+            <div class="ci">📚</div>
+            <div><span class="ct">Version catalog style</span>
+              <p>In a bigger project put the versions in <code>gradle/libs.versions.toml</code> (lesson 18) and write <code>testImplementation(platform(libs.junit.bom))</code>. Android Studio's <b>Project Structure → Dependencies</b> dialog can add libraries for you, too.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="first-test" data-title="Your first test">
+          <div class="sec-head"><h2><span class="sec-num">17.3</span>Write your first test</h2></div>
+          <p>Here is a small class to test. Press ▶ Run to see what it does:</p>
+          <script type="text/plain" data-code="java" data-file="lessons/src/main/java/com/example/lessons/l17/PriceCalculator.java" data-run>
+            public class PriceCalculator {
+                private final int vatPercent;
+
+                public PriceCalculator(int vatPercent) {
+                    if (vatPercent < 0) throw new IllegalArgumentException("VAT can't be negative");
+                    this.vatPercent = vatPercent;
+                }
+
+                /** Net price in cents → gross price in cents, rounded half up. */
+                public long gross(long netCents) {
+                    if (netCents < 0) throw new IllegalArgumentException("Price can't be negative: " + netCents);
+                    return Math.round(netCents * (100 + vatPercent) / 100.0);
+                }
+
+                public static void main(String[] args) {
+                    PriceCalculator calc = new PriceCalculator(20);
+                    for (long net : new long[] {0, 5, 1_000, 999}) {
+                        System.out.println(net + " → " + calc.gross(net));
+                    }
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            0 → 0
+            5 → 6
+            1000 → 1200
+            999 → 1199
+          </script>
+          <p class="small muted">On this site the <code>package</code> line is omitted so the example can run; in Android Studio keep <code>package com.example.lessons.l17;</code> at the top.</p>
+          <ol class="steps">
+            <li><b>Generate the test class</b>Put the caret on <code>PriceCalculator</code> and press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>T</kbd> (<kbd>⌘</kbd>+<kbd>⇧</kbd>+<kbd>T</kbd>) → <b>Create New Test…</b>. Testing library: <b>JUnit5</b>. Tick <code>gross</code> and <em>setUp/@Before</em>. Android Studio creates <code>src/test/java/com/example/lessons/l17/PriceCalculatorTest.java</code> — same package, test folder.</li>
+            <li><b>Write the tests</b>Each test follows <b>Arrange – Act – Assert</b> and checks one behaviour. Name it after that behaviour.</li>
+          </ol>
+          <script type="text/plain" data-code="java" data-file="lessons/src/test/java/com/example/lessons/l17/PriceCalculatorTest.java" data-numbered>
+            package com.example.lessons.l17;
+
+            import static org.junit.jupiter.api.Assertions.assertEquals;
+            import static org.junit.jupiter.api.Assertions.assertThrows;
+
+            import org.junit.jupiter.api.BeforeEach;
+            import org.junit.jupiter.api.DisplayName;
+            import org.junit.jupiter.api.Test;
+            import org.junit.jupiter.params.ParameterizedTest;
+            import org.junit.jupiter.params.provider.CsvSource;
+
+            class PriceCalculatorTest {
+
+                private PriceCalculator calc;
+
+                @BeforeEach
+                void setUp() {                                 // a fresh object for every test
+                    calc = new PriceCalculator(20);
+                }
+
+                @Test
+                @DisplayName("adds 20 % VAT")
+                void addsVat() {
+                    long gross = calc.gross(1_000);             // Act
+                    assertEquals(1_200, gross);                 // Assert (expected, actual)
+                }
+
+                @Test
+                void rejectsNegativePrices() {
+                    IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () -> calc.gross(-1));
+                    assertEquals("Price can't be negative: -1", e.getMessage());
+                }
+
+                @ParameterizedTest(name = "{0} → {1}")
+                @CsvSource({"0, 0", "5, 6", "999, 1199"})     // one test run per row
+                void roundsHalfUp(long net, long expected) {
+                    assertEquals(expected, calc.gross(net));
+                }
+            }
+          </script>
+          <p class="small muted">JUnit 5 test classes and methods don't need to be <code>public</code>. Assertions are static methods you import from <code>org.junit.jupiter.api.Assertions</code>.</p>
+        </section>
+
+        <section class="doc-section" id="run-ide" data-title="Run tests in Android Studio">
+          <div class="sec-head"><h2><span class="sec-num">17.4</span>Run tests in Android Studio</h2></div>
+          <div class="table-wrap">
+            <table class="t">
+              <thead><tr><th>To run…</th><th>Do this</th></tr></thead>
+              <tbody>
+                <tr><td>One test method</td><td>Click the ▶ in the gutter next to the method → <b>Run 'addsVat()'</b></td></tr>
+                <tr><td>A whole test class</td><td>Gutter ▶ next to the class, or <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>F10</kbd> (<kbd>⌃</kbd>+<kbd>⇧</kbd>+<kbd>R</kbd>) inside it</td></tr>
+                <tr><td>A package / all tests of a module</td><td>Right-click the package or the <code>test/java</code> folder → <b>Run 'Tests in …'</b></td></tr>
+                <tr><td>The same tests again</td><td><kbd>Shift</kbd>+<kbd>F10</kbd> (<kbd>⌃</kbd>+<kbd>R</kbd>) re-runs the last configuration</td></tr>
+                <tr><td>Only the failures</td><td>The <b>Rerun Failed Tests</b> button in the Run window</td></tr>
+                <tr><td>With the debugger</td><td>Gutter ▶ → <b>Debug</b> 🐞 — set a breakpoint in the test or the code under test</td></tr>
+                <tr><td>With coverage</td><td>Gutter ▶ → <b>Run … with Coverage</b> (section 17.7)</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>The <b>Run</b> tool window shows a tree of results: ✔ green for passed, ✘ red for failed, with the time each test took. Click a failed test to see its message and stack trace; for <code>assertEquals</code> failures, <b>&lt;Click to see difference&gt;</b> opens a side-by-side diff of expected vs actual.</p>
+          <script type="text/plain" data-output="A failing test in the Run window">
+            ✘ PriceCalculatorTest > addsVat()
+            org.opentest4j.AssertionFailedError: expected: <1200> but was: <1220>
+                at org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+                at org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:663)
+                at com.example.lessons.l17.PriceCalculatorTest.addsVat(PriceCalculatorTest.java:25)
+          </script>
+          <div class="callout tip">
+            <div class="ci">🔁</div>
+            <div><span class="ct">Make it a habit</span>
+              <p>Pin the test configuration (toolbar dropdown → it's saved automatically) and run it after every small change. Toggle <b>Toggle auto-test</b> in the Run window to re-run tests automatically whenever you edit code.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="run-gradle" data-title="Run tests with Gradle">
+          <div class="sec-head"><h2><span class="sec-num">17.5</span>Run tests with Gradle and read the report</h2></div>
+          <p>The IDE delegates to Gradle by default (<b>Settings → Build Tools → Gradle → Run tests using: Gradle</b>), so the terminal gives exactly the same results — and it's what CI uses. Open the <b>Terminal</b> tool window (<kbd>Alt</kbd>+<kbd>F12</kbd>):</p>
+          <script type="text/plain" data-code="bash" data-file="Terminal">
+            $ ./gradlew :lessons:test                                    # all tests of the lessons module
+            $ ./gradlew :lessons:test --tests "*PriceCalculatorTest"      # one class
+            $ ./gradlew :lessons:test --tests "*PriceCalculatorTest.addsVat"   # one method
+            $ ./gradlew :lessons:test --rerun                            # force a re-run (skip the up-to-date check)
+            $ ./gradlew :lessons:test --continuous                       # re-run on every file save (Ctrl+D to stop)
+
+            $ ./gradlew :app:testDebugUnitTest                           # Android app module: local unit tests
+            $ ./gradlew test                                             # every module, every variant
+          </script>
+          <script type="text/plain" data-output="Console">
+            > Task :lessons:test
+
+            PriceCalculatorTest > adds 20 % VAT PASSED
+            PriceCalculatorTest > rejectsNegativePrices() PASSED
+            PriceCalculatorTest > roundsHalfUp(long, long) > 0 → 0 PASSED
+            PriceCalculatorTest > roundsHalfUp(long, long) > 5 → 6 PASSED
+            PriceCalculatorTest > roundsHalfUp(long, long) > 999 → 1199 PASSED
+
+            BUILD SUCCESSFUL in 3s
+          </script>
+          <p>Gradle also writes an <b>HTML report</b> you can open in a browser (right-click → <b>Open In → Browser</b>) and JUnit XML files that CI systems understand:</p>
+          <div class="filetree"><span class="d">lessons/build/</span>
+├── <span class="d">reports/tests/test/</span>index.html             <span class="c"># Java module report</span>
+└── <span class="d">test-results/test/</span>TEST-*.xml               <span class="c"># machine-readable results</span>
+<span class="d">app/build/</span>
+└── <span class="d">reports/tests/testDebugUnitTest/</span>index.html <span class="c"># Android local unit tests</span></div>
+        </section>
+
+        <section class="doc-section" id="setup-android" data-title="Setup B: an Android app module (JUnit 4)">
+          <div class="sec-head"><h2><span class="sec-num">17.6</span>Setup B — an Android app module (JUnit 4)</h2></div>
+          <p>New Android Studio app projects are already set up for testing: <b>JUnit 4</b> for local tests and AndroidX Test for instrumented ones. Check <code>app/build.gradle.kts</code>:</p>
+          <script type="text/plain" data-code="kts" data-file="app/build.gradle.kts">
+            android {
+                defaultConfig {
+                    testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"  // for src/androidTest
+                }
+                testOptions {
+                    unitTests.isReturnDefaultValues = true    // android.* stubs return 0/null instead of throwing
+                }
+            }
+
+            dependencies {
+                testImplementation(libs.junit)                           // junit:junit:4.13.2
+                testImplementation(libs.androidx.arch.core.testing)      // InstantTaskExecutorRule for LiveData
+                androidTestImplementation(libs.androidx.test.ext.junit)
+                androidTestImplementation(libs.androidx.espresso.core)
+            }
+          </script>
+          <p>A JUnit 4 test looks almost the same — different imports and annotation names:</p>
+          <script type="text/plain" data-code="java" data-file="app/src/test/java/com/javaacademy/spendly/domain/MoneyTest.java">
+            package com.javaacademy.spendly.domain;
+
+            import static org.junit.Assert.assertEquals;
+            import static org.junit.Assert.assertFalse;
+
+            import org.junit.Test;
+
+            import java.util.OptionalLong;
+
+            public class MoneyTest {                                  // JUnit 4: public class + public methods
+
+                @Test
+                public void parsesWholeAndDecimalAmounts() {
+                    assertEquals(OptionalLong.of(1200), Money.parseCents("12"));
+                    assertEquals(OptionalLong.of(1250), Money.parseCents("12,50"));
+                }
+
+                @Test
+                public void rejectsGarbage() {
+                    assertFalse(Money.parseCents("abc").isPresent());
+                }
+            }
+          </script>
+          <div class="table-wrap">
+            <table class="t">
+              <thead><tr><th>JUnit 5 (Jupiter)</th><th>JUnit 4</th></tr></thead>
+              <tbody>
+                <tr><td><code>org.junit.jupiter.api.Test</code></td><td><code>org.junit.Test</code></td></tr>
+                <tr><td><code>@BeforeEach</code> / <code>@AfterEach</code></td><td><code>@Before</code> / <code>@After</code></td></tr>
+                <tr><td><code>@BeforeAll</code> (static)</td><td><code>@BeforeClass</code> (static)</td></tr>
+                <tr><td><code>@Disabled</code></td><td><code>@Ignore</code></td></tr>
+                <tr><td><code>assertThrows(Type.class, () -&gt; …)</code></td><td><code>assertThrows</code> (4.13+) or <code>@Test(expected = …)</code></td></tr>
+                <tr><td><code>@ParameterizedTest</code> + <code>@CsvSource</code></td><td><code>@RunWith(Parameterized.class)</code></td></tr>
+                <tr><td>Extensions (<code>@ExtendWith</code>)</td><td>Rules (<code>@Rule</code>), runners (<code>@RunWith</code>)</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="callout warn">
+            <div class="ci">🧱</div>
+            <div><span class="ct">“Method … not mocked”</span>
+              <p>Local tests compile against a stub <code>android.jar</code> whose methods throw <code>RuntimeException("Method ... not mocked")</code>. The real fix is architectural: keep logic in plain Java classes (Spendly's whole <code>domain</code> package has no Android imports) so it's trivially testable. <code>isReturnDefaultValues = true</code> softens the stubs; <b>Robolectric</b> simulates the framework if you truly need it; otherwise write an instrumented test.</p>
+            </div>
+          </div>
+          <p>Testing a ViewModel that uses <code>LiveData</code>? Add <code>InstantTaskExecutorRule</code> so LiveData runs synchronously on the test thread — exactly what Spendly's <code>ExpenseListViewModelTest</code> does (lesson 23):</p>
+          <script type="text/plain" data-code="java" data-file="ExpenseListViewModelTest.java (excerpt)">
+            @Rule
+            public InstantTaskExecutorRule instantLiveData = new InstantTaskExecutorRule();
+
+            @Before
+            public void setUp() {
+                viewModel = new ExpenseListViewModel(new FakeExpenseRepository(...), new FakeSettingsStore(Settings.DEFAULT),
+                        new FakeRateService(), Runnable::run, Clock.fixed(Instant.parse("2026-03-14T10:00:00Z"), ZoneOffset.UTC));
+                viewModel.state().observeForever(s -> latest = s);
+            }
+          </script>
+          <p class="small muted">Want JUnit 5 in an Android module too? Android Gradle Plugin doesn't run it natively; the community plugin <code>de.mannodermaus.android-junit5</code> adds support. Most Android teams stay on JUnit 4 for app modules and use JUnit 5 in pure Java/Kotlin modules.</p>
+        </section>
+
+        <section class="doc-section" id="coverage" data-title="Code coverage">
+          <div class="sec-head"><h2><span class="sec-num">17.7</span>Code coverage</h2></div>
+          <p><b>Coverage</b> shows which lines your tests executed. It finds untested code — it does <em>not</em> prove the tests check the right things.</p>
+          <ul>
+            <li><b>In the IDE</b>: gutter ▶ → <b>Run 'PriceCalculatorTest' with Coverage</b>. The <b>Coverage</b> tool window lists % of classes, methods and lines; the editor marks lines green (covered), red (missed) or yellow (partially, e.g. one branch of an <code>if</code>).</li>
+            <li><b>With Gradle (Java module)</b>: apply the <code>jacoco</code> plugin and run <code>./gradlew :lessons:test :lessons:jacocoTestReport</code>; open <code>lessons/build/reports/jacoco/test/html/index.html</code>.</li>
+            <li><b>With Gradle (Android module)</b>: enable it for the debug build type and run <code>./gradlew :app:createDebugUnitTestCoverageReport</code>; the report lands in <code>app/build/reports/coverage/test/debug/</code>.</li>
+          </ul>
+          <div class="compare">
+            <div><div class="cmp-label c-primary">lessons/build.gradle.kts</div>
+              <script type="text/plain" data-code="kts" data-file="Java module">
+                plugins {
+                    id("java-library")
+                    jacoco
+                }
+
+                tasks.jacocoTestReport {
+                    dependsOn(tasks.test)
+                }
+              </script>
+            </div>
+            <div><div class="cmp-label c-green">app/build.gradle.kts</div>
+              <script type="text/plain" data-code="kts" data-file="Android module">
+                android {
+                    buildTypes {
+                        debug {
+                            enableUnitTestCoverage = true
+                        }
+                    }
+                }
+              </script>
+            </div>
+          </div>
+          <p class="small muted">Aim for high coverage of <b>domain logic</b> (rules, calculations, parsing); don't chase 100 % on Activities and generated code.</p>
+        </section>
+
+        <section class="doc-section" id="mockito" data-title="Mocking with Mockito">
+          <div class="sec-head"><h2><span class="sec-num">17.8</span>Mocking with Mockito</h2></div>
+          <p>When the class under test talks to something slow or external (network, clock, database), replace it in the test. Lesson 16 showed hand-written <b>fakes</b>; <b>Mockito</b> creates stand-ins on the fly and lets you verify interactions:</p>
+          <script type="text/plain" data-code="java" data-file="CheckoutServiceTest.java">
+            import static org.junit.jupiter.api.Assertions.assertFalse;
+            import static org.mockito.ArgumentMatchers.anyLong;
+            import static org.mockito.ArgumentMatchers.anyString;
+            import static org.mockito.Mockito.mock;
+            import static org.mockito.Mockito.never;
+            import static org.mockito.Mockito.verify;
+            import static org.mockito.Mockito.when;
+
+            import org.junit.jupiter.api.Test;
+
+            class CheckoutServiceTest {
+
+                private final PaymentGateway gateway = mock(PaymentGateway.class);   // an interface
+                private final Mailer mailer = mock(Mailer.class);
+                private final CheckoutService checkout = new CheckoutService(gateway, mailer);
+
+                @Test
+                void sendsReceiptWhenPaymentSucceeds() {
+                    when(gateway.charge("ada", 1_200)).thenReturn(true);       // stub
+
+                    checkout.buy("ada", 1_200);
+
+                    verify(mailer).sendReceipt("ada", 1_200);                   // verify an interaction
+                }
+
+                @Test
+                void noReceiptWhenPaymentFails() {
+                    when(gateway.charge(anyString(), anyLong())).thenReturn(false);
+
+                    assertFalse(checkout.buy("ada", 1_200));
+                    verify(mailer, never()).sendReceipt(anyString(), anyLong());
+                }
+            }
+          </script>
+          <p class="small muted">Add <code>testImplementation("org.mockito:mockito-core:5.14.2")</code>. Prefer fakes for data you control; reach for mocks when you need to assert “this call happened” or to simulate rare failures. Don't mock types you don't own (like <code>Context</code>) — wrap them behind your own interface instead.</p>
+        </section>
+
+        <section class="doc-section" id="ci" data-title="Run tests in CI">
+          <div class="sec-head"><h2><span class="sec-num">17.9</span>Run tests automatically on every push</h2></div>
+          <p>Tests only protect you if they run. A <b>GitHub Actions</b> workflow runs them on a fresh machine for every push and pull request — this repository's Spendly project uses exactly this file:</p>
+          <script type="text/plain" data-code="text" data-file=".github/workflows/android.yml">
+            name: Spendly Android CI
+            on: [push, pull_request]
+            jobs:
+              build:
+                runs-on: ubuntu-latest
+                defaults:
+                  run:
+                    working-directory: final-project/Spendly
+                steps:
+                  - uses: actions/checkout@v4
+                  - uses: actions/setup-java@v4
+                    with:
+                      distribution: temurin
+                      java-version: 17
+                  - uses: gradle/actions/setup-gradle@v4
+                  - run: ./gradlew assembleDebug testDebugUnitTest lintDebug
+                  - uses: actions/upload-artifact@v4
+                    if: always()                       # keep the report even when tests fail
+                    with:
+                      name: unit-test-reports
+                      path: final-project/Spendly/app/build/reports/tests/
+          </script>
+          <p>A red ✘ on the commit means a test failed; open the run, read the failing test's output, download the report artifact, fix, push again.</p>
+        </section>
+
+        <section class="doc-section" id="tdd" data-title="Test-driven development">
+          <div class="sec-head"><h2><span class="sec-num">17.10</span>Red → Green → Refactor</h2></div>
+          <p><b>Test-driven development</b> flips the order: write a failing test first, then the simplest code that passes, then clean up. It forces small steps and testable designs.</p>
+          <div class="flow">
+            <div class="fbox">🔴 Red<small>write a failing test</small></div><span class="farrow">→</span>
+            <div class="fbox">🟢 Green<small>simplest code that passes</small></div><span class="farrow">→</span>
+            <div class="fbox">🔵 Refactor<small>clean up, tests stay green</small></div><span class="farrow">↺</span>
+          </div>
+          <ol>
+            <li>Test: <code>assertEquals("1", FizzBuzz.of(1));</code> — doesn't even compile → create <code>FizzBuzz.of</code> returning <code>""</code> → red.</li>
+            <li>Make it pass: <code>return String.valueOf(n);</code> → green.</li>
+            <li>Next test: <code>assertEquals("Fizz", FizzBuzz.of(3));</code> → red → add the rule → green.</li>
+            <li>Continue with <code>5 → "Buzz"</code>, <code>15 → "FizzBuzz"</code>; refactor with a parameterised test once the cases form a table.</li>
+          </ol>
+        </section>
+
+        <section class="doc-section" id="troubleshooting" data-title="Troubleshooting">
+          <div class="sec-head"><h2><span class="sec-num">17.11</span>Troubleshooting</h2></div>
+          <div class="table-wrap">
+            <table class="t">
+              <thead><tr><th>Symptom</th><th>Cause</th><th>Fix</th></tr></thead>
+              <tbody>
+                <tr><td><em>No tests found for given includes</em> / 0 tests run</td><td>JUnit 5 tests but no <code>useJUnitPlatform()</code></td><td>Add it to <code>tasks.test</code> (17.2)</td></tr>
+                <tr><td>JUnit 5 tests ignored in an Android app module</td><td>AGP runs JUnit 4</td><td>Use JUnit 4 there, or the android-junit5 plugin</td></tr>
+                <tr><td><code>Cannot resolve symbol 'jupiter'</code></td><td>Dependency missing or not synced</td><td>Add it to <code>testImplementation</code>, Sync</td></tr>
+                <tr><td><em>Method … in android.… not mocked</em></td><td>Framework code in a local test</td><td>Move logic out of Android classes, or <code>isReturnDefaultValues</code>, Robolectric, instrumented test</td></tr>
+                <tr><td>LiveData value is <code>null</code> in a test</td><td>No observer / no main looper</td><td><code>InstantTaskExecutorRule</code> + <code>observeForever</code></td></tr>
+                <tr><td>Test passes alone, fails with others</td><td>Shared mutable (static) state between tests</td><td>Create fresh objects in <code>@BeforeEach</code>; avoid statics</td></tr>
+                <tr><td>Passes on your machine, fails in CI</td><td>Depends on time zone, locale, current date or network</td><td>Inject <code>Clock</code>, pass <code>Locale</code> explicitly, fake the network</td></tr>
+                <tr><td>Tests in a folder aren't recognised</td><td>Folder isn't a test source root</td><td>Use <code>src/test/java</code> (green folder icon)</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="doc-section" id="exercises" data-title="Exercises">
+          <div class="sec-head"><h2><span class="sec-num">17.12</span>Exercises</h2></div>
+          <details class="exercise">
+            <summary>Exercise 1 — Set up and go green <span class="badge green">Easy</span></summary>
+            <div class="ex-body">
+              <p>Add JUnit 5 to your <code>lessons</code> module, copy <code>PriceCalculator</code> and its test, and run them three ways: gutter ▶, right-click on <code>test/java</code>, and <code>./gradlew :lessons:test</code>. Open the HTML report. Then break <code>gross()</code> on purpose and read the failure diff.</p>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 2 — Test the leap-year rule <span class="badge blue">Medium</span></summary>
+            <div class="ex-body">
+              <p>Move <code>isLeapYear</code> from lesson 05 into a class and cover it with one parameterised test that includes 1900, 2000, 2024 and 2025. Run it with coverage — is every branch green?</p>
+              <script type="text/plain" data-code="java" data-file="Solution — LeapYearTest.java">
+                class LeapYearTest {
+                    @ParameterizedTest(name = "{0} leap? {1}")
+                    @CsvSource({"1900, false", "2000, true", "2024, true", "2025, false"})
+                    void leapYears(int year, boolean expected) {
+                        assertEquals(expected, Calendar2.isLeapYear(year));
+                    }
+                }
+              </script>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 3 — Run Spendly's tests <span class="badge amber">Challenge</span></summary>
+            <div class="ex-body">
+              <p>Open <code>final-project/Spendly</code> in Android Studio. Run all local unit tests with <code>./gradlew testDebugUnitTest</code>, then run <code>ExpenseDaoTest</code> on an emulator from its gutter icon. Generate the debug unit-test coverage report and find the least-covered class in <code>domain</code>.</p>
+            </div>
+          </details>
+        </section>
+
+        <section class="doc-section" id="quiz" data-title="Quiz">
+          <div class="sec-head"><h2><span class="sec-num">17.13</span>Quiz</h2></div>
+          <script type="application/json" data-quiz>
+          [
+            {"q": "Gradle reports 0 tests although you wrote JUnit 5 tests in a Java module. Most likely cause?", "options": ["The tests are not public", "`tasks.test { useJUnitPlatform() }` is missing", "You need a device", "JUnit 5 doesn't work in Android Studio"], "answer": 1, "explain": "Gradle's test task uses the JUnit 4 runner unless told to use the JUnit Platform."},
+            {"q": "Where do tests that need a real SQLite database (Room) on Android go?", "options": ["`src/test/java`", "`src/androidTest/java`", "`src/main/java`", "`res/raw`"], "answer": 1, "explain": "Instrumented tests run on a device with the real framework; run them with connectedDebugAndroidTest."},
+            {"q": "Which command runs only the local unit tests of an Android app module's debug variant?", "options": ["`./gradlew connectedDebugAndroidTest`", "`./gradlew testDebugUnitTest`", "`./gradlew lintDebug`", "`./gradlew assembleDebug`"], "answer": 1, "explain": "testDebugUnitTest runs src/test on the JVM. connected…AndroidTest needs a device."},
+            {"q": "In JUnit 4, what replaces JUnit 5's `@BeforeEach`?", "options": ["`@Before`", "`@BeforeClass`", "`@Setup`", "`@Init`"], "answer": 0, "explain": "@Before runs before each test; @BeforeClass (static) runs once per class."},
+            {"q": "What does 90 % line coverage tell you?", "options": ["90 % of behaviours are correct", "Tests executed 90 % of the lines — not that they assert the right things", "The app has 10 % bugs", "Nothing useful"], "answer": 1, "explain": "Coverage finds untested code; only good assertions make tests meaningful."}
+          ]
+          </script>
+        </section>
+
+        <section class="doc-section" id="references" data-title="Further reading">
+          <div class="sec-head"><h2><span class="sec-num">17.14</span>Further reading</h2></div>
+          <ul>
+            <li><a href="https://developer.android.com/studio/test/test-in-android-studio" target="_blank" rel="noopener">Test in Android Studio (official)</a></li>
+            <li><a href="https://developer.android.com/training/testing/local-tests" target="_blank" rel="noopener">Build local unit tests</a></li>
+            <li><a href="https://junit.org/junit5/docs/current/user-guide/" target="_blank" rel="noopener">JUnit 5 user guide</a> · <a href="https://docs.gradle.org/current/userguide/java_testing.html" target="_blank" rel="noopener">Testing in Java &amp; JVM projects (Gradle)</a></li>
+            <li><a href="https://site.mockito.org/" target="_blank" rel="noopener">Mockito</a> · <a href="https://www.jetbrains.com/help/idea/code-coverage.html" target="_blank" rel="noopener">Code coverage in IntelliJ-based IDEs</a></li>
+          </ul>
+        </section>
+
+        <div id="pager"></div>
+      </div>
+    </main>
+  </div>
+  <div id="site-footer"></div>
+  <script src="assets/js/core.js?v=__BUILD__"></script>
+</body>
+</html>

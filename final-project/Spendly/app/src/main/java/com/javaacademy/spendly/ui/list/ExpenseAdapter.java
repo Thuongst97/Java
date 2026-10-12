@@ -20,7 +20,7 @@ import java.util.Locale;
 import java.util.function.Consumer;
 
 /**
- * Adapts a list of expenses to RecyclerView rows (lesson 18). {@link ListAdapter} diffs each new
+ * Adapts a list of expenses to RecyclerView rows (lesson 19). {@link ListAdapter} diffs each new
  * list against the old one on a background thread and animates only what changed.
  */
 public final class ExpenseAdapter extends ListAdapter<Expense, ExpenseAdapter.Holder> {

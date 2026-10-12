@@ -16,7 +16,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * Manual dependency injection (lesson 19): the one place that knows how to build every
+ * Manual dependency injection (lesson 20): the one place that knows how to build every
  * long-lived object. Created once in {@link SpendlyApp#onCreate()}, so each dependency is a
  * single shared instance for the whole process. Hilt/Dagger generate this kind of class for you.
  */

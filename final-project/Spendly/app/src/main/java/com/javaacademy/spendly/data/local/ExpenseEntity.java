@@ -9,7 +9,7 @@ import androidx.room.PrimaryKey;
 /**
  * The database row for an expense. Room needs a plain class with a constructor matching
  * its fields, so this is separate from the domain {@code Expense} record; {@code ExpenseMapper}
- * converts between the two (lesson 20).
+ * converts between the two (lesson 21).
  */
 @Entity(tableName = "expenses", indices = {@Index("date")})
 public class ExpenseEntity {

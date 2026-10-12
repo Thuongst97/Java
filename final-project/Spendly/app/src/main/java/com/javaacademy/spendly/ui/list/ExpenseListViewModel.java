@@ -25,7 +25,7 @@ import java.util.concurrent.Executor;
 /**
  * State holder for the list screen. Inputs (all expenses, selected month, filter) are combined
  * with a {@link MediatorLiveData} into one immutable {@link ExpenseListState} that the Activity
- * simply renders — unidirectional data flow (lesson 19).
+ * simply renders — unidirectional data flow (lesson 20).
  */
 public final class ExpenseListViewModel extends ViewModel {
 
