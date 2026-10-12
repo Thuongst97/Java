@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Spendly" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">#53DBC9</item>
+        <item name="colorOnPrimary">#003731</item>
+        <item name="colorPrimaryContainer">#005048</item>
+        <item name="colorOnPrimaryContainer">#74F8E5</item>
+        <item name="colorSecondaryContainer">#334B47</item>
+        <item name="colorOnSecondaryContainer">#CCE8E2</item>
+    </style>
+</resources>

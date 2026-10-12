@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Spendly</string>
+
+    <!-- List screen -->
+    <string name="search">Search</string>
+    <string name="search_hint">Search expenses</string>
+    <string name="settings">Settings</string>
+    <string name="navigate_up">Navigate up</string>
+    <string name="previous_month">Previous month</string>
+    <string name="next_month">Next month</string>
+    <string name="spent_this_month">Spent this month</string>
+    <string name="all_categories">All</string>
+    <string name="add_expense">Add expense</string>
+    <string name="no_expenses_this_month">No expenses this month</string>
+    <plurals name="summary_details">
+        <item quantity="one">%1$d expense · top: %2$s · %3$s per day</item>
+        <item quantity="other">%1$d expenses · top: %2$s · %3$s per day</item>
+    </plurals>
+    <string name="empty_month">Nothing logged yet.\nTap + to add your first expense.</string>
+    <string name="empty_filtered">No expenses match your search or filter.</string>
+    <string name="deleted">Deleted “%1$s”</string>
+    <string name="undo">Undo</string>
+    <string name="convert_to">Convert to %1$s</string>
+    <string name="converting">Fetching exchange rate…</string>
+    <string name="converted_total">≈ %1$s</string>
+    <string name="conversion_failed">Couldn\'t load the exchange rate. Check your connection.</string>
+
+    <!-- Edit screen -->
+    <string name="new_expense">New expense</string>
+    <string name="edit_expense">Edit expense</string>
+    <string name="title">Title</string>
+    <string name="amount">Amount</string>
+    <string name="category">Category</string>
+    <string name="date">Date</string>
+    <string name="note">Note (optional)</string>
+    <string name="save">Save</string>
+    <string name="delete">Delete</string>
+    <string name="delete_title">Delete this expense?</string>
+    <string name="delete_message">This can\'t be undone.</string>
+    <string name="error_required">Required</string>
+    <string name="error_too_long">Too long</string>
+    <string name="error_not_a_number">Enter a number like 12.50</string>
+    <string name="error_not_positive">Must be more than zero</string>
+    <string name="error_too_large">That\'s too large</string>
+    <string name="error_future_date">Can\'t be in the future</string>
+
+    <!-- Settings -->
+    <string name="currency">Currency</string>
+    <string name="convert_currency">Convert totals to</string>
+    <string name="theme">Theme</string>
+    <string name="theme_system">System default</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="reminders">Reminders</string>
+    <string name="daily_reminder">Daily reminder at 20:00</string>
+    <string name="daily_reminder_summary">Only if you haven\'t logged anything that day</string>
+    <string name="notifications_denied">Notifications are off. You can allow them in system settings.</string>
+    <string name="rates_attribution">Exchange rates: European Central Bank via frankfurter.dev</string>
+
+    <!-- Notifications -->
+    <string name="channel_reminders">Reminders</string>
+    <string name="channel_reminders_description">The daily reminder to log your expenses</string>
+    <string name="reminder_title">Any expenses today?</string>
+    <string name="reminder_text">Take 10 seconds to log what you spent.</string>
+</resources>
