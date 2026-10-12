@@ -1,0 +1,508 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Inheritance, Polymorphism &amp; Interfaces — Java Academy</title>
+  <meta name="description" content="Java inheritance with extends and super, overriding, dynamic dispatch, abstract classes, interfaces with default methods, and composition over inheritance.">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="assets/css/main.css?v=__BUILD__">
+  <script>try{var t=localStorage.getItem("ja-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body data-page="inheritance">
+  <div id="site-header"></div>
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+      <div class="content-inner">
+
+        <header class="page-hero">
+          <nav class="crumbs"><a href="index.html">Home</a><span>/</span><span>Object-Oriented Java</span><span>/</span><span>Lesson 08</span></nav>
+          <div class="eyebrow">Lesson 08 · Object-Oriented Java</div>
+          <h1>Inheritance, Polymorphism &amp; Interfaces</h1>
+          <p class="lead">Write code that works with <em>any</em> kind of shape, payment method or click listener. Inheritance and interfaces let one piece of code handle many types — the foundation of every Android API you will use.</p>
+          <div class="page-meta"><span>⏱ 60 min</span><span>🎯 Intermediate</span><span>🧩 Prerequisite: lesson 07</span></div>
+          <div class="objectives">
+            <h4>You will be able to</h4>
+            <ul>
+              <li>Extend classes and call <code>super</code></li>
+              <li>Override methods correctly with <code>@Override</code></li>
+              <li>Explain dynamic dispatch (polymorphism)</li>
+              <li>Use abstract classes and the template method</li>
+              <li>Design interfaces with default methods</li>
+              <li>Prefer composition when inheritance doesn't fit</li>
+            </ul>
+          </div>
+        </header>
+
+        <section class="doc-section" id="extends" data-title="extends & super">
+          <div class="sec-head"><h2><span class="sec-num">8.1</span><code>extends</code> and <code>super</code></h2></div>
+          <p>A <b>subclass</b> inherits the fields and methods of its <b>superclass</b> and can add its own. The relationship must read naturally as “<em>is a</em>”: a <code>SavingsAccount</code> is an <code>Account</code>. A subclass constructor must call a superclass constructor first — explicitly with <code>super(…)</code> or implicitly with the no-arg one.</p>
+          <script type="text/plain" data-code="java" data-file="Accounts.java" data-run>
+            class Account {
+                protected long balance;          // protected: visible to subclasses
+                private final String id;
+
+                Account(String id, long balance) {
+                    this.id = id;
+                    this.balance = balance;
+                }
+
+                void deposit(long amount) { balance += amount; }
+                String id() { return id; }
+            }
+
+            class SavingsAccount extends Account {
+                private final double rate;
+
+                SavingsAccount(String id, long balance, double rate) {
+                    super(id, balance);          // must come first
+                    this.rate = rate;
+                }
+
+                void addInterest() {             // new behaviour only savings accounts have
+                    deposit(Math.round(balance * rate));
+                }
+            }
+
+            public class Accounts {
+                public static void main(String[] args) {
+                    SavingsAccount s = new SavingsAccount("SAV-1", 10_000, 0.03);
+                    s.deposit(5_000);            // inherited
+                    s.addInterest();             // own method
+                    System.out.println(s.id() + ": " + s.balance);
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            SAV-1: 15450
+          </script>
+          <p class="small muted">Java has <b>single inheritance</b> of classes: a class extends exactly one class (<code>Object</code> if you don't say). It may implement many interfaces.</p>
+        </section>
+
+        <section class="doc-section" id="overriding" data-title="Overriding">
+          <div class="sec-head"><h2><span class="sec-num">8.2</span>Overriding methods</h2></div>
+          <p>A subclass <b>overrides</b> a method by declaring one with the same signature. Always add <code>@Override</code>: the compiler then errors if you misspell the name or get a parameter wrong. Call the parent version with <code>super.method()</code>.</p>
+          <script type="text/plain" data-code="java" data-file="Notifications.java" data-run>
+            class Notification {
+                String render(String text) { return text; }
+            }
+
+            class UrgentNotification extends Notification {
+                @Override
+                String render(String text) {
+                    return "🚨 " + super.render(text).toUpperCase();   // extend, don't duplicate
+                }
+            }
+
+            final class SilentNotification extends Notification {     // final class: no further subclasses
+                @Override
+                final String render(String text) { return ""; }        // final method: can't be overridden
+            }
+
+            public class Notifications {
+                public static void main(String[] args) {
+                    System.out.println(new Notification().render("Build finished"));
+                    System.out.println(new UrgentNotification().render("Build failed"));
+                    System.out.println("[" + new SilentNotification().render("ignored") + "]");
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            Build finished
+            🚨 BUILD FAILED
+            []
+          </script>
+          <div class="table-wrap">
+            <table class="t">
+              <thead><tr><th>Rule</th><th>Why</th></tr></thead>
+              <tbody>
+                <tr><td>Same name and parameter types</td><td>Otherwise it's an <em>overload</em>, not an override</td></tr>
+                <tr><td>Visibility can widen, never narrow</td><td>Code that could call the parent method must be able to call the child's</td></tr>
+                <tr><td>Return type may be a subtype (covariant)</td><td><code>Animal create()</code> → <code>Dog create()</code> is fine</td></tr>
+                <tr><td><code>static</code>, <code>private</code> and <code>final</code> methods can't be overridden</td><td>They're not dispatched dynamically</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="doc-section" id="polymorphism" data-title="Polymorphism">
+          <div class="sec-head"><h2><span class="sec-num">8.3</span>Polymorphism and dynamic dispatch</h2></div>
+          <p>A variable's <b>declared (static) type</b> decides which methods you may <em>call</em>; the object's <b>runtime type</b> decides which implementation <em>runs</em>. That's <b>dynamic dispatch</b>, and it lets one loop handle every subtype — including ones written next year.</p>
+          <script type="text/plain" data-code="java" data-file="Zoo.java" data-run>
+            class Animal {
+                String name() { return getClass().getSimpleName(); }
+                String sound() { return "..."; }
+            }
+            class Dog extends Animal { @Override String sound() { return "Woof"; } void fetch() { System.out.println("fetching!"); } }
+            class Cat extends Animal { @Override String sound() { return "Meow"; } }
+            class Cow extends Animal { @Override String sound() { return "Moo"; } }
+
+            public class Zoo {
+                public static void main(String[] args) {
+                    Animal[] animals = {new Dog(), new Cat(), new Cow(), new Animal()};
+                    for (Animal a : animals) {                 // static type: Animal
+                        System.out.println(a.name() + ": " + a.sound()); // runtime type decides
+                    }
+
+                    Animal pet = new Dog();
+                    // pet.fetch();                            // ✗ Animal has no fetch()
+                    if (pet instanceof Dog dog) {             // check + cast in one step
+                        dog.fetch();
+                    }
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            Dog: Woof
+            Cat: Meow
+            Cow: Moo
+            Animal: ...
+            fetching!
+          </script>
+          <div class="callout note">
+            <div class="ci">🤖</div>
+            <div><span class="ct">You'll see this everywhere on Android</span>
+              <p><code>MainActivity extends AppCompatActivity</code> and overrides <code>onCreate</code>; the framework holds it as an <code>Activity</code> and calls <code>onCreate()</code> — your version runs. Every <code>RecyclerView.Adapter</code>, <code>Worker</code> and <code>ViewModel</code> you write in lessons 17–22 works the same way.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="abstract" data-title="Abstract classes">
+          <div class="sec-head"><h2><span class="sec-num">8.4</span>Abstract classes and the template method</h2></div>
+          <p>An <code>abstract</code> class can't be instantiated; it exists to be extended. It may declare <code>abstract</code> methods (no body) that every concrete subclass must implement, alongside normal fields and methods. A classic use is the <b>template method</b> pattern: the base class fixes the algorithm's steps, subclasses fill in the details.</p>
+          <script type="text/plain" data-code="java" data-file="Reports.java" data-run>
+            import java.util.List;
+
+            abstract class Report {
+                // The template: the order of steps is fixed and final.
+                final String generate(List<String> rows) {
+                    StringBuilder sb = new StringBuilder(header());
+                    for (String row : rows) sb.append(formatRow(row));
+                    return sb.append(footer(rows.size())).toString();
+                }
+
+                protected abstract String header();              // subclasses MUST provide these
+                protected abstract String formatRow(String row);
+                protected String footer(int count) { return count + " rows\n"; }  // optional hook
+            }
+
+            class CsvReport extends Report {
+                @Override protected String header() { return "item\n"; }
+                @Override protected String formatRow(String row) { return row + "\n"; }
+            }
+
+            class MarkdownReport extends Report {
+                @Override protected String header() { return "| item |\n|---|\n"; }
+                @Override protected String formatRow(String row) { return "| " + row + " |\n"; }
+                @Override protected String footer(int count) { return "\n_" + count + " rows_\n"; }
+            }
+
+            public class Reports {
+                public static void main(String[] args) {
+                    List<String> rows = List.of("coffee", "cake");
+                    System.out.print(new CsvReport().generate(rows));
+                    System.out.print(new MarkdownReport().generate(rows));
+                    // new Report();   // ✗ Report is abstract; cannot be instantiated
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            item
+            coffee
+            cake
+            2 rows
+            | item |
+            |---|
+            | coffee |
+            | cake |
+
+            _2 rows_
+          </script>
+        </section>
+
+        <section class="doc-section" id="interfaces" data-title="Interfaces">
+          <div class="sec-head"><h2><span class="sec-num">8.5</span>Interfaces</h2></div>
+          <p>An <b>interface</b> is a pure contract: “anything that implements me can do X”. A class can implement <b>many</b> interfaces, and unrelated classes can share one. Since Java 8 interfaces may also contain <code>default</code> methods (with a body), <code>static</code> methods and, since Java 9, <code>private</code> helpers.</p>
+          <script type="text/plain" data-code="java" data-file="Payments.java" data-run>
+            interface PaymentMethod {
+                boolean pay(long cents);                              // abstract: implementers decide
+
+                default String label() { return getClass().getSimpleName(); }  // shared behaviour
+
+                static PaymentMethod cash() { return cents -> true; }  // factory (a lambda — lesson 13)
+            }
+
+            interface Refundable {
+                void refund(long cents);
+            }
+
+            class Card implements PaymentMethod, Refundable {         // many interfaces
+                private long limit;
+                Card(long limit) { this.limit = limit; }
+
+                @Override public boolean pay(long cents) {
+                    if (cents > limit) return false;
+                    limit -= cents;
+                    return true;
+                }
+                @Override public void refund(long cents) { limit += cents; }
+                @Override public String label() { return "Card (limit " + limit + ")"; }
+            }
+
+            class GiftVoucher implements PaymentMethod {
+                private long value;
+                GiftVoucher(long value) { this.value = value; }
+                @Override public boolean pay(long cents) {
+                    boolean ok = cents <= value;
+                    if (ok) value -= cents;
+                    return ok;
+                }
+            }
+
+            public class Payments {
+                static void checkout(PaymentMethod method, long cents) {   // works with ANY implementation
+                    System.out.println(method.label() + " pays " + cents + ": " + (method.pay(cents) ? "OK" : "DECLINED"));
+                }
+
+                public static void main(String[] args) {
+                    checkout(new Card(5_000), 3_000);
+                    checkout(new GiftVoucher(1_000), 2_500);
+                    checkout(PaymentMethod.cash(), 999);
+
+                    Card card = new Card(1_000);
+                    if (card instanceof Refundable r) r.refund(500);
+                    System.out.println(card.label());
+                }
+            }
+          </script>
+          <script type="text/plain" data-output data-loose>
+            Card (limit 5000) pays 3000: OK
+            GiftVoucher pays 2500: DECLINED
+            Payments$$Lambda/0x… pays 999: OK
+            Card (limit 1500)
+          </script>
+          <p class="small muted">The third line shows the generated class name of a lambda — it differs between JVMs, which is exactly why a lambda should override <code>label()</code> if it matters. Note also that <code>label()</code> in line 1 is evaluated <em>before</em> <code>pay()</code> because Java evaluates string concatenation left to right.</p>
+          <div class="callout java">
+            <div class="ci">👂</div>
+            <div><span class="ct">Interfaces on Android: listeners</span>
+              <p><code>View.OnClickListener</code> is an interface with one method, <code>onClick(View v)</code>. When you write <code>button.setOnClickListener(v -&gt; save())</code> you pass an implementation of it. Callbacks, adapters, DAOs and repositories in this course are all interfaces.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="abstract-vs-interface" data-title="Abstract class vs interface">
+          <div class="sec-head"><h2><span class="sec-num">8.6</span>Abstract class or interface?</h2></div>
+          <div class="table-wrap">
+            <table class="t">
+              <thead><tr><th></th><th>Interface</th><th>Abstract class</th></tr></thead>
+              <tbody>
+                <tr><td>A class can have…</td><td>many</td><td>one</td></tr>
+                <tr><td>Instance fields (state)</td><td>no (only <code>static final</code> constants)</td><td>yes</td></tr>
+                <tr><td>Constructors</td><td>no</td><td>yes</td></tr>
+                <tr><td>Method bodies</td><td><code>default</code>, <code>static</code>, <code>private</code></td><td>any</td></tr>
+                <tr><td>Use for</td><td>a capability / contract (“can be compared”, “can pay”)</td><td>sharing state and code among closely related classes</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><b>Default to interfaces.</b> They keep types flexible and testable (you can substitute a fake implementation — lesson 16). Add an abstract base class later if implementations share a lot of code.</p>
+        </section>
+
+        <section class="doc-section" id="composition" data-title="Composition over inheritance">
+          <div class="sec-head"><h2><span class="sec-num">8.7</span>Composition over inheritance</h2></div>
+          <p>Inheritance couples a subclass tightly to its parent's <em>implementation</em>. If “is a” doesn't hold, or you only want to reuse some behaviour, <b>compose</b>: hold the other object in a field and delegate to it.</p>
+          <script type="text/plain" data-code="java" data-file="Composition.java" data-run>
+            import java.util.ArrayList;
+            import java.util.List;
+
+            interface Logger { void log(String msg); }
+
+            class ConsoleLogger implements Logger {
+                @Override public void log(String msg) { System.out.println("[log] " + msg); }
+            }
+
+            // A playlist HAS a list and HAS a logger; it is neither.
+            class Playlist {
+                private final List<String> songs = new ArrayList<>();
+                private final Logger logger;
+
+                Playlist(Logger logger) { this.logger = logger; }   // the dependency is injected
+
+                void add(String song) {
+                    if (songs.contains(song)) { logger.log("duplicate " + song); return; }
+                    songs.add(song);
+                    logger.log("added " + song);
+                }
+
+                int size() { return songs.size(); }   // expose only what makes sense
+            }
+
+            public class Composition {
+                public static void main(String[] args) {
+                    Playlist p = new Playlist(new ConsoleLogger());
+                    p.add("Hey Jude");
+                    p.add("Hey Jude");
+                    System.out.println(p.size() + " song(s)");
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            [log] added Hey Jude
+            [log] duplicate Hey Jude
+            1 song(s)
+          </script>
+          <div class="callout tip">
+            <div class="ci">🧩</div>
+            <div><span class="ct">Why this matters</span>
+              <p>If <code>Playlist extends ArrayList</code>, callers could bypass <code>add</code> with <code>addAll</code> or <code>set</code> and break your no-duplicates rule. Composition exposes only the operations you choose, and passing the <code>Logger</code> in the constructor (<b>dependency injection</b>) lets a test supply a fake. Lesson 19 uses exactly this to build Android repositories.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="exercises" data-title="Exercises">
+          <div class="sec-head"><h2><span class="sec-num">8.8</span>Exercises</h2></div>
+          <details class="exercise">
+            <summary>Exercise 1 — Shapes <span class="badge green">Easy</span></summary>
+            <div class="ex-body">
+              <p>Create an abstract class <code>Shape</code> with <code>abstract double area()</code> and a concrete <code>describe()</code>. Implement <code>Circle</code> and <code>Square</code>, then print the total area of an array of mixed shapes.</p>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run>
+                abstract class Shape {
+                    abstract double area();
+                    String describe() { return String.format("%s with area %.2f", getClass().getSimpleName(), area()); }
+                }
+                class Circle extends Shape {
+                    private final double r;
+                    Circle(double r) { this.r = r; }
+                    @Override double area() { return Math.PI * r * r; }
+                }
+                class Square extends Shape {
+                    private final double side;
+                    Square(double side) { this.side = side; }
+                    @Override double area() { return side * side; }
+                }
+
+                public class ShapesDemo {
+                    public static void main(String[] args) {
+                        Shape[] shapes = {new Circle(1), new Square(2), new Circle(0.5)};
+                        double total = 0;
+                        for (Shape s : shapes) {
+                            System.out.println(s.describe());
+                            total += s.area();
+                        }
+                        System.out.printf("Total: %.2f%n", total);
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output>
+                Circle with area 3.14
+                Square with area 4.00
+                Circle with area 0.79
+                Total: 7.93
+              </script>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 2 — Discount strategies <span class="badge blue">Medium</span></summary>
+            <div class="ex-body">
+              <p>Define <code>interface Discount { long apply(long cents); }</code> with implementations <code>NoDiscount</code>, <code>PercentOff(int percent)</code> and <code>FixedOff(long cents)</code> (never below 0). Add a <code>default Discount then(Discount next)</code> that chains two discounts.</p>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run>
+                interface Discount {
+                    long apply(long cents);
+                    default Discount then(Discount next) {
+                        return cents -> next.apply(this.apply(cents));
+                    }
+                }
+                class NoDiscount implements Discount { public long apply(long c) { return c; } }
+                class PercentOff implements Discount {
+                    private final int percent;
+                    PercentOff(int percent) { this.percent = percent; }
+                    public long apply(long c) { return c - c * percent / 100; }
+                }
+                class FixedOff implements Discount {
+                    private final long off;
+                    FixedOff(long off) { this.off = off; }
+                    public long apply(long c) { return Math.max(0, c - off); }
+                }
+
+                public class Discounts {
+                    public static void main(String[] args) {
+                        long price = 10_000;
+                        System.out.println(new NoDiscount().apply(price));
+                        System.out.println(new PercentOff(20).apply(price));
+                        System.out.println(new PercentOff(20).then(new FixedOff(1_500)).apply(price));
+                        System.out.println(new FixedOff(20_000).apply(price));
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output>
+                10000
+                8000
+                6500
+                0
+              </script>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 3 — Predict the output <span class="badge amber">Challenge</span></summary>
+            <div class="ex-body">
+              <p>Without running it: what does this print, and why is calling an overridable method from a constructor dangerous?</p>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run>
+                class Base {
+                    Base() { System.out.println("Base sees: " + describe()); }
+                    String describe() { return "base"; }
+                }
+                class Child extends Base {
+                    private String name = "child";      // (a final constant would be inlined by javac)
+                    Child() { System.out.println("Child sees: " + describe()); }
+                    @Override String describe() { return "I am " + name; }
+                }
+
+                public class Puzzle {
+                    public static void main(String[] args) {
+                        new Child();
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output>
+                Base sees: I am null
+                Child sees: I am child
+              </script>
+              <p class="small muted">The superclass constructor runs <em>before</em> the subclass's fields are initialised, yet dynamic dispatch already calls <code>Child.describe()</code>, which reads a field that is still <code>null</code>. Never call overridable methods from constructors.</p>
+            </div>
+          </details>
+        </section>
+
+        <section class="doc-section" id="quiz" data-title="Quiz">
+          <div class="sec-head"><h2><span class="sec-num">8.9</span>Quiz</h2></div>
+          <script type="application/json" data-quiz>
+          [
+            {"q": "`Animal a = new Dog(); a.sound();` — which `sound()` runs?", "options": ["Animal's, because of the variable type", "Dog's, because of the runtime type", "It depends on the import", "It doesn't compile"], "answer": 1, "explain": "Instance methods are dispatched on the object's runtime type. The declared type only limits which methods you may call."},
+            {"q": "How many classes can a Java class extend, and how many interfaces can it implement?", "options": ["1 and 1", "Many and 1", "1 and many", "Many and many"], "answer": 2, "explain": "Single inheritance of classes, multiple inheritance of interfaces (types)."},
+            {"q": "What does `@Override` do?", "options": ["Makes a method faster", "Asks the compiler to verify that the method really overrides a supertype method", "Makes the method final", "Is required for overriding to work"], "answer": 1, "explain": "Overriding works without it, but the annotation turns typos and wrong parameters into compile errors. Always use it."},
+            {"q": "Which can an interface NOT have?", "options": ["`default` methods", "`static` methods", "Instance fields that hold per-object state", "`private` helper methods"], "answer": 2, "explain": "Interface fields are implicitly `public static final` constants. Per-object state requires a class."},
+            {"q": "When should you prefer composition over inheritance?", "options": ["Never", "When the 'is a' relationship doesn't truly hold or you only need part of another class's behaviour", "Only for interfaces", "Only on Android"], "answer": 1, "explain": "Inheritance exposes and couples you to the parent's whole implementation; composition lets you choose what to expose and swap implementations."}
+          ]
+          </script>
+        </section>
+
+        <section class="doc-section" id="references" data-title="Further reading">
+          <div class="sec-head"><h2><span class="sec-num">8.10</span>Further reading</h2></div>
+          <ul>
+            <li><a href="https://dev.java/learn/inheritance/" target="_blank" rel="noopener">dev.java — Inheritance</a></li>
+            <li><a href="https://dev.java/learn/interfaces/" target="_blank" rel="noopener">dev.java — Interfaces</a></li>
+            <li>Joshua Bloch, <em>Effective Java</em>, item 18: “Favor composition over inheritance”, item 19: “Design and document for inheritance or else prohibit it”</li>
+          </ul>
+        </section>
+
+        <div id="pager"></div>
+      </div>
+    </main>
+  </div>
+  <div id="site-footer"></div>
+  <script src="assets/js/core.js?v=__BUILD__"></script>
+</body>
+</html>

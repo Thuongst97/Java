@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Records, Enums, Sealed Types &amp; Pattern Matching — Java Academy</title>
+  <meta name="description" content="Modern Java data modelling: records, enums with fields, sealed hierarchies, pattern matching for instanceof and switch, record patterns, nested and anonymous classes.">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="assets/css/main.css?v=__BUILD__">
+  <script>try{var t=localStorage.getItem("ja-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body data-page="modern-types">
+  <div id="site-header"></div>
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+      <div class="content-inner">
+
+        <header class="page-hero">
+          <nav class="crumbs"><a href="index.html">Home</a><span>/</span><span>Object-Oriented Java</span><span>/</span><span>Lesson 09</span></nav>
+          <div class="eyebrow">Lesson 09 · Object-Oriented Java</div>
+          <h1>Records, Enums, Sealed Types &amp; Pattern Matching</h1>
+          <p class="lead">Modern Java (16–21) lets you model data with a fraction of the code: records for plain data, enums for fixed sets, sealed types for closed hierarchies, and pattern matching to take them apart safely. Plus the nested and anonymous classes you'll meet in older Android code.</p>
+          <div class="page-meta"><span>⏱ 55 min</span><span>🎯 Intermediate</span><span>🧩 Prerequisite: lesson 08</span></div>
+          <div class="objectives">
+            <h4>You will be able to</h4>
+            <ul>
+              <li>Replace boilerplate classes with records</li>
+              <li>Write enums with fields and behaviour</li>
+              <li>Model closed hierarchies with <code>sealed</code></li>
+              <li>Use pattern matching in <code>instanceof</code> and <code>switch</code></li>
+              <li>Deconstruct records with record patterns</li>
+              <li>Read nested, inner and anonymous classes</li>
+            </ul>
+          </div>
+        </header>
+
+        <section class="doc-section" id="records" data-title="Records">
+          <div class="sec-head"><h2><span class="sec-num">9.1</span>Records: data classes in one line</h2></div>
+          <p>A <code>record</code> (Java 16) is a transparent, immutable carrier of data. From the header, the compiler generates private final fields, a constructor, accessor methods (<code>name()</code>, not <code>getName()</code>), <code>equals</code>, <code>hashCode</code> and <code>toString</code>.</p>
+          <div class="compare">
+            <div><div class="cmp-label c-orange">Classic class (≈ 30 lines)</div>
+              <script type="text/plain" data-code="java" data-file="Point.java">
+                public final class Point {
+                    private final int x;
+                    private final int y;
+                    public Point(int x, int y) { this.x = x; this.y = y; }
+                    public int x() { return x; }
+                    public int y() { return y; }
+                    @Override public boolean equals(Object o) { /* … */ }
+                    @Override public int hashCode() { /* … */ }
+                    @Override public String toString() { /* … */ }
+                }
+              </script>
+            </div>
+            <div><div class="cmp-label c-primary">Record</div>
+              <script type="text/plain" data-code="java" data-file="Point.java">
+                public record Point(int x, int y) { }
+
+                // equals, hashCode, toString, accessors
+                // and the constructor are generated.
+              </script>
+            </div>
+          </div>
+          <script type="text/plain" data-code="java" data-file="Records.java" data-run>
+            import java.util.Objects;
+
+            record Expense(String title, long cents, String category) {
+                Expense {                                         // compact constructor: validate/normalise
+                    Objects.requireNonNull(title, "title");
+                    if (cents <= 0) throw new IllegalArgumentException("cents must be > 0");
+                    title = title.strip();                        // reassigns the parameter before it's stored
+                }
+
+                static Expense coffee(long cents) {               // static factories are allowed
+                    return new Expense("Coffee", cents, "FOOD");
+                }
+
+                Expense withCents(long newCents) {                // a "wither": records are immutable
+                    return new Expense(title, newCents, category);
+                }
+
+                String display() { return String.format("%s %d.%02d", title, cents / 100, cents % 100); }
+            }
+
+            public class Records {
+                public static void main(String[] args) {
+                    Expense e = new Expense("  Bus ticket ", 280, "TRANSPORT");
+                    System.out.println(e);
+                    System.out.println(e.title() + " / " + e.cents());
+                    System.out.println(Expense.coffee(350).equals(new Expense("Coffee", 350, "FOOD")));
+                    System.out.println(e.withCents(300).display());
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            Expense[title=Bus ticket, cents=280, category=TRANSPORT]
+            Bus ticket / 280
+            true
+            Bus ticket 3.00
+          </script>
+          <div class="callout note">
+            <div class="ci">📏</div>
+            <div><span class="ct">Record rules</span>
+              <p>Records are implicitly <code>final</code>, can't extend another class (they may implement interfaces), and can't declare extra instance fields. Use them for values: DTOs, results, keys, events, UI state. Use a normal class when you need mutable state or encapsulated invariants that change over time.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="enums" data-title="Enums">
+          <div class="sec-head"><h2><span class="sec-num">9.2</span>Enums: a fixed set of constants</h2></div>
+          <p>An <code>enum</code> defines a type with a fixed set of named instances. Unlike <code>int</code> constants, enums are type-safe, printable and can carry fields and methods.</p>
+          <script type="text/plain" data-code="java" data-file="Enums.java" data-run>
+            import java.util.EnumMap;
+            import java.util.Map;
+
+            enum Category {
+                FOOD("🍔", 300_00), TRANSPORT("🚌", 100_00), FUN("🎉", 150_00), OTHER("📦", 0);
+
+                private final String emoji;
+                private final long monthlyBudgetCents;
+
+                Category(String emoji, long monthlyBudgetCents) {    // constructor is implicitly private
+                    this.emoji = emoji;
+                    this.monthlyBudgetCents = monthlyBudgetCents;
+                }
+
+                String label() {
+                    return emoji + " " + name().charAt(0) + name().substring(1).toLowerCase();
+                }
+
+                boolean hasBudget() { return monthlyBudgetCents > 0; }
+            }
+
+            public class Enums {
+                public static void main(String[] args) {
+                    for (Category c : Category.values()) {
+                        System.out.println(c.ordinal() + " " + c.label() + (c.hasBudget() ? "" : " (no budget)"));
+                    }
+                    Category parsed = Category.valueOf("FUN");          // String → enum
+                    System.out.println(parsed == Category.FUN);         // == is fine for enums
+
+                    String advice = switch (parsed) {                   // exhaustive without default
+                        case FOOD -> "Cook at home";
+                        case TRANSPORT -> "Walk more";
+                        case FUN -> "Free museum day";
+                        case OTHER -> "Review subscriptions";
+                    };
+                    System.out.println(advice);
+
+                    Map<Category, Long> spent = new EnumMap<>(Category.class); // fast, ordered by declaration
+                    spent.put(Category.FUN, 4_200L);
+                    spent.put(Category.FOOD, 12_550L);
+                    System.out.println(spent);
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            0 🍔 Food
+            1 🚌 Transport
+            2 🎉 Fun
+            3 📦 Other (no budget)
+            true
+            Free museum day
+            {FOOD=12550, FUN=4200}
+          </script>
+          <div class="callout warn">
+            <div class="ci">💾</div>
+            <div><span class="ct">Persist names, not ordinals</span>
+              <p><code>ordinal()</code> changes if someone reorders the constants. When saving an enum to a database or preferences, store <code>name()</code> and read it back with <code>valueOf</code> — the Spendly app does exactly this.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="sealed" data-title="Sealed types">
+          <div class="sec-head"><h2><span class="sec-num">9.3</span>Sealed classes and interfaces</h2></div>
+          <p>A <code>sealed</code> type (Java 17) lists exactly which types may extend it with <code>permits</code>. The hierarchy is closed, so the compiler knows every possible case — perfect for modelling results, UI states and commands. Each permitted subtype must be <code>final</code>, <code>sealed</code> or <code>non-sealed</code> (records are implicitly final).</p>
+          <script type="text/plain" data-code="java" data-file="Sealed.java" data-run>
+            sealed interface LoadState permits Loading, Success, Failure { }
+            record Loading() implements LoadState { }
+            record Success(java.util.List<String> items) implements LoadState { }
+            record Failure(String message, boolean canRetry) implements LoadState { }
+
+            public class Sealed {
+                static String render(LoadState state) {
+                    return switch (state) {                    // exhaustive: no default needed
+                        case Loading l -> "⏳ Loading…";
+                        case Success s -> "✅ " + s.items().size() + " items";
+                        case Failure f -> "❌ " + f.message() + (f.canRetry() ? " [Retry]" : "");
+                    };
+                }
+
+                public static void main(String[] args) {
+                    System.out.println(render(new Loading()));
+                    System.out.println(render(new Success(java.util.List.of("a", "b"))));
+                    System.out.println(render(new Failure("Offline", true)));
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            ⏳ Loading…
+            ✅ 2 items
+            ❌ Offline [Retry]
+          </script>
+          <p>Add a fourth state, <code>record Empty() implements LoadState</code>, to the <code>permits</code> list and the <code>switch</code> stops compiling until you handle it. That compile error is the whole point: no forgotten cases.</p>
+        </section>
+
+        <section class="doc-section" id="instanceof" data-title="Pattern matching for instanceof">
+          <div class="sec-head"><h2><span class="sec-num">9.4</span>Pattern matching for <code>instanceof</code></h2></div>
+          <p>Since Java 16 <code>instanceof</code> can test <em>and</em> bind a typed variable in one step, so the cast disappears:</p>
+          <div class="compare">
+            <div><div class="cmp-label c-orange">Before</div>
+              <script type="text/plain" data-code="java" data-file="Old.java">
+                if (obj instanceof String) {
+                    String s = (String) obj;
+                    System.out.println(s.length());
+                }
+              </script>
+            </div>
+            <div><div class="cmp-label c-primary">Java 16+</div>
+              <script type="text/plain" data-code="java" data-file="New.java">
+                if (obj instanceof String s && !s.isEmpty()) {
+                    System.out.println(s.length());
+                }
+              </script>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="switch-patterns" data-title="Switch patterns & record patterns">
+          <div class="sec-head"><h2><span class="sec-num">9.5</span>Switch patterns and record patterns (Java 21)</h2></div>
+          <p>A <code>switch</code> can match on <b>types</b>, refine with a <code>when</code> guard, handle <code>null</code>, and <b>deconstruct</b> records into their components:</p>
+          <script type="text/plain" data-code="java" data-file="Patterns.java" data-run>
+            sealed interface Shape permits Circle, Rect, Line { }
+            record Circle(double radius) implements Shape { }
+            record Rect(double w, double h) implements Shape { }
+            record Line(double length) implements Shape { }
+
+            public class Patterns {
+                static String describe(Object o) {
+                    return switch (o) {
+                        case null -> "nothing";
+                        case Integer i when i < 0 -> "negative int " + i;
+                        case Integer i -> "int " + i;
+                        case String s -> "text of length " + s.length();
+                        case Rect(double w, double h) when w == h -> "square " + w;   // record pattern + guard
+                        case Rect(var w, var h) -> "rectangle " + w + "×" + h;        // var in patterns
+                        case Circle c -> String.format("circle, area %.1f", Math.PI * c.radius() * c.radius());
+                        default -> "something else: " + o.getClass().getSimpleName();
+                    };
+                }
+
+                static double area(Shape s) {           // sealed → exhaustive, no default
+                    return switch (s) {
+                        case Circle(double r) -> Math.PI * r * r;
+                        case Rect(double w, double h) -> w * h;
+                        case Line l -> 0;
+                    };
+                }
+
+                public static void main(String[] args) {
+                    Object[] things = {null, -5, 42, "hello", new Rect(2, 2), new Rect(2, 3), new Circle(1), 3.5};
+                    for (Object t : things) System.out.println(describe(t));
+                    System.out.println(area(new Rect(2, 3)) + area(new Line(10)));
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            nothing
+            negative int -5
+            int 42
+            text of length 5
+            square 2.0
+            rectangle 2.0×3.0
+            circle, area 3.1
+            something else: Double
+            6.0
+          </script>
+          <div class="callout tip">
+            <div class="ci">🧠</div>
+            <div><span class="ct">Order matters</span>
+              <p>Cases are tried top to bottom. A more general pattern before a specific one (<code>case Integer i</code> before <code>case Integer i when i &lt; 0</code>) is a compile error: the second could never match (it is “dominated”).</p>
+            </div>
+          </div>
+          <div class="callout note">
+            <div class="ci">🤖</div>
+            <div><span class="ct">On Android</span>
+              <p>Records, sealed types, text blocks, switch expressions and <code>instanceof</code> patterns (Java 16/17) are supported in Android apps built with a current Android Gradle Plugin and <code>JavaVersion.VERSION_17</code> — the final project uses records. Newer features such as switch pattern matching (Java 21) depend on your AGP version; check <a href="https://developer.android.com/build/jdks" target="_blank" rel="noopener">Java versions in Android builds</a> before relying on them in an app.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="nested" data-title="Nested & anonymous classes">
+          <div class="sec-head"><h2><span class="sec-num">9.6</span>Nested, inner and anonymous classes</h2></div>
+          <div class="table-wrap">
+            <table class="t">
+              <thead><tr><th>Kind</th><th>Declared</th><th>Has access to outer <code>this</code>?</th><th>Typical use</th></tr></thead>
+              <tbody>
+                <tr><td><b>Static nested</b></td><td><code>static class Builder</code> inside a class</td><td>No</td><td>Builders, helper types, <code>RecyclerView.ViewHolder</code></td></tr>
+                <tr><td><b>Inner</b></td><td><code>class Node</code> (non-static) inside a class</td><td>Yes (holds a hidden reference!)</td><td>Iterators tied to one collection</td></tr>
+                <tr><td><b>Local</b></td><td>inside a method</td><td>Yes, plus effectively-final locals</td><td>Rare</td></tr>
+                <tr><td><b>Anonymous</b></td><td><code>new Interface() { … }</code></td><td>Yes</td><td>One-off implementations — often replaced by lambdas</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <script type="text/plain" data-code="java" data-file="Nested.java" data-run>
+            import java.util.ArrayList;
+            import java.util.Comparator;
+            import java.util.List;
+
+            class Pizza {
+                private final String size;
+                private final List<String> toppings;
+
+                private Pizza(Builder b) { size = b.size; toppings = b.toppings; }
+
+                static class Builder {                         // static nested: no outer instance needed
+                    private String size = "M";
+                    private final List<String> toppings = new ArrayList<>();
+                    Builder size(String s) { size = s; return this; }   // return this → chaining
+                    Builder add(String t) { toppings.add(t); return this; }
+                    Pizza build() { return new Pizza(this); }
+                }
+
+                @Override public String toString() { return size + " pizza with " + toppings; }
+            }
+
+            public class Nested {
+                public static void main(String[] args) {
+                    Pizza p = new Pizza.Builder().size("L").add("mushroom").add("olive").build();
+                    System.out.println(p);
+
+                    List<String> words = new ArrayList<>(List.of("kiwi", "fig", "banana"));
+                    words.sort(new Comparator<String>() {          // anonymous class (old style)
+                        @Override public int compare(String a, String b) { return a.length() - b.length(); }
+                    });
+                    System.out.println(words);
+                    words.sort((a, b) -> b.length() - a.length()); // the same idea as a lambda (lesson 13)
+                    System.out.println(words);
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            L pizza with [mushroom, olive]
+            [fig, kiwi, banana]
+            [banana, kiwi, fig]
+          </script>
+          <div class="callout danger">
+            <div class="ci">💧</div>
+            <div><span class="ct">The classic Android leak</span>
+              <p>An <em>inner</em> or <em>anonymous</em> class inside an <code>Activity</code> silently keeps a reference to that Activity. If such an object outlives the screen (a background task, a static field, a delayed <code>Handler</code> message) the whole Activity and its views can't be garbage-collected. Prefer <code>static</code> nested classes and lifecycle-aware components (lesson 19).</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="exercises" data-title="Exercises">
+          <div class="sec-head"><h2><span class="sec-num">9.7</span>Exercises</h2></div>
+          <details class="exercise">
+            <summary>Exercise 1 — Planets <span class="badge green">Easy</span></summary>
+            <div class="ex-body">
+              <p>Create <code>enum Planet</code> with MERCURY, EARTH and JUPITER, each with its surface gravity in m/s² (3.7, 9.81, 24.79). Add <code>weight(double massKg)</code> and print how much a 70 kg person weighs (in newtons) on each.</p>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run>
+                enum Planet {
+                    MERCURY(3.7), EARTH(9.81), JUPITER(24.79);
+                    private final double gravity;
+                    Planet(double gravity) { this.gravity = gravity; }
+                    double weight(double massKg) { return massKg * gravity; }
+                }
+
+                public class Planets {
+                    public static void main(String[] args) {
+                        for (Planet p : Planet.values()) {
+                            System.out.printf("%-8s %7.1f N%n", p, p.weight(70));
+                        }
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output>
+                MERCURY    259.0 N
+                EARTH      686.7 N
+                JUPITER   1735.3 N
+              </script>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 2 — A Result type <span class="badge blue">Medium</span></summary>
+            <div class="ex-body">
+              <p>Model the result of parsing an age as <code>sealed interface ParseResult</code> with records <code>Ok(int value)</code> and <code>Err(String reason)</code>. Write <code>parseAge(String)</code> (0–150 only) and print each result with a switch.</p>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run>
+                sealed interface ParseResult permits Ok, Err { }
+                record Ok(int value) implements ParseResult { }
+                record Err(String reason) implements ParseResult { }
+
+                public class AgeParser {
+                    static ParseResult parseAge(String text) {
+                        try {
+                            int age = Integer.parseInt(text.strip());
+                            return (age < 0 || age > 150) ? new Err("out of range: " + age) : new Ok(age);
+                        } catch (NumberFormatException e) {
+                            return new Err("not a number: '" + text + "'");
+                        }
+                    }
+
+                    public static void main(String[] args) {
+                        for (String in : new String[] {"36", " 7 ", "-1", "abc"}) {
+                            String msg = switch (parseAge(in)) {
+                                case Ok(int v) -> "age " + v;
+                                case Err(String why) -> "error, " + why;
+                            };
+                            System.out.println(msg);
+                        }
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output>
+                age 36
+                age 7
+                error, out of range: -1
+                error, not a number: 'abc'
+              </script>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 3 — Expression evaluator <span class="badge amber">Challenge</span></summary>
+            <div class="ex-body">
+              <p>Represent arithmetic expressions as a sealed hierarchy: <code>Num(double)</code>, <code>Add(Expr, Expr)</code>, <code>Mul(Expr, Expr)</code>, <code>Neg(Expr)</code>. Write recursive <code>eval</code> and <code>show</code> methods using record patterns. Evaluate <code>-(2 + 3) * 4</code>.</p>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run>
+                sealed interface Expr permits Num, Add, Mul, Neg { }
+                record Num(double value) implements Expr { }
+                record Add(Expr left, Expr right) implements Expr { }
+                record Mul(Expr left, Expr right) implements Expr { }
+                record Neg(Expr inner) implements Expr { }
+
+                public class Calc {
+                    static double eval(Expr e) {
+                        return switch (e) {
+                            case Num(double v) -> v;
+                            case Add(Expr l, Expr r) -> eval(l) + eval(r);
+                            case Mul(Expr l, Expr r) -> eval(l) * eval(r);
+                            case Neg(Expr inner) -> -eval(inner);
+                        };
+                    }
+
+                    static String show(Expr e) {
+                        return switch (e) {
+                            case Num(double v) -> v == Math.floor(v) ? String.valueOf((long) v) : String.valueOf(v);
+                            case Add(Expr l, Expr r) -> "(" + show(l) + " + " + show(r) + ")";
+                            case Mul(Expr l, Expr r) -> show(l) + " * " + show(r);
+                            case Neg(Expr inner) -> "-" + show(inner);
+                        };
+                    }
+
+                    public static void main(String[] args) {
+                        Expr e = new Mul(new Neg(new Add(new Num(2), new Num(3))), new Num(4));
+                        System.out.println(show(e) + " = " + eval(e));
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output>
+                -(2 + 3) * 4 = -20.0
+              </script>
+            </div>
+          </details>
+        </section>
+
+        <section class="doc-section" id="quiz" data-title="Quiz">
+          <div class="sec-head"><h2><span class="sec-num">9.8</span>Quiz</h2></div>
+          <script type="application/json" data-quiz>
+          [
+            {"q": "For `record User(String name, int age)`, how do you read the name?", "options": ["`user.getName()`", "`user.name`", "`user.name()`", "`user.get(\"name\")`"], "answer": 2, "explain": "Record accessors are named after the components, without a `get` prefix. The field itself is private."},
+            {"q": "What is a compact constructor used for?", "options": ["Making records mutable", "Validating or normalising parameters before the fields are assigned", "Adding extra fields", "Calling super()"], "answer": 1, "explain": "The compact form `Record { … }` runs before the generated field assignments; you can check and reassign parameters there."},
+            {"q": "Why can a switch over a sealed interface omit `default`?", "options": ["Defaults are deprecated", "The compiler knows every permitted subtype, so it can check exhaustiveness", "Sealed types can't be null", "It can't — default is always required"], "answer": 1, "explain": "`permits` closes the hierarchy, so listing every subtype is provably complete — and adding a new subtype causes a compile error where it isn't handled."},
+            {"q": "Which value should you store in a database for an enum constant?", "options": ["`ordinal()`", "`name()`", "`hashCode()`", "`toString()` of the enum class"], "answer": 1, "explain": "Ordinals change when constants are reordered or inserted. Names are stable (unless you rename them deliberately)."},
+            {"q": "Why can an anonymous class inside an Activity cause a memory leak?", "options": ["Anonymous classes are never garbage-collected", "It holds an implicit reference to the enclosing Activity, which may outlive the screen", "It copies all the Activity's fields", "Android forbids anonymous classes"], "answer": 1, "explain": "Inner and anonymous classes capture the outer `this`. If the object lives longer than the Activity (background work, static field), the Activity can't be collected."}
+          ]
+          </script>
+        </section>
+
+        <section class="doc-section" id="references" data-title="Further reading">
+          <div class="sec-head"><h2><span class="sec-num">9.9</span>Further reading</h2></div>
+          <ul>
+            <li><a href="https://dev.java/learn/records/" target="_blank" rel="noopener">dev.java — Records</a></li>
+            <li><a href="https://dev.java/learn/classes-objects/enums/" target="_blank" rel="noopener">dev.java — Enums</a></li>
+            <li><a href="https://dev.java/learn/pattern-matching/" target="_blank" rel="noopener">dev.java — Pattern matching</a></li>
+            <li><a href="https://openjdk.org/jeps/441" target="_blank" rel="noopener">JEP 441 — Pattern matching for switch</a> · <a href="https://openjdk.org/jeps/440" target="_blank" rel="noopener">JEP 440 — Record patterns</a></li>
+          </ul>
+        </section>
+
+        <div id="pager"></div>
+      </div>
+    </main>
+  </div>
+  <div id="site-footer"></div>
+  <script src="assets/js/core.js?v=__BUILD__"></script>
+</body>
+</html>
