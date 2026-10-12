@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Building UIs with Views — Java Academy</title>
+  <meta name="description" content="Android UIs in Java: XML layouts, ConstraintLayout, View Binding, events and validation, RecyclerView with ListAdapter and DiffUtil, Material 3, themes and accessibility.">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="assets/css/main.css?v=__BUILD__">
+  <script>try{var t=localStorage.getItem("ja-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body data-page="views">
+  <div id="site-header"></div>
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+      <div class="content-inner">
+
+        <header class="page-hero">
+          <nav class="crumbs"><a href="index.html">Home</a><span>/</span><span>Android with Java</span><span>/</span><span>Lesson 19</span></nav>
+          <div class="eyebrow">Lesson 19 · Android with Java</div>
+          <h1>Building UIs with Views</h1>
+          <p class="lead">Android's View system is how Java apps draw their screens: XML layouts, Material components, View Binding to reach them safely from code, and RecyclerView for lists of any length. By the end you can build every screen of the final project.</p>
+          <div class="page-meta"><span>⏱ 75 min</span><span>🎯 Intermediate</span><span>🧩 Prerequisite: lesson 18</span></div>
+          <div class="objectives">
+            <h4>You will be able to</h4>
+            <ul>
+              <li>Read and write XML layouts</li>
+              <li>Choose between Linear, Frame and ConstraintLayout</li>
+              <li>Access views with View Binding</li>
+              <li>Handle clicks, text input and validation errors</li>
+              <li>Build lists with RecyclerView, ListAdapter and DiffUtil</li>
+              <li>Use Material 3 components, themes, dark mode and insets</li>
+            </ul>
+          </div>
+        </header>
+
+        <section class="doc-section" id="view-tree" data-title="The view tree">
+          <div class="sec-head"><h2><span class="sec-num">19.1</span>Views, ViewGroups and the layout file</h2></div>
+          <p>Everything on screen is a <code>View</code> (a button, a text, an image). A <code>ViewGroup</code> is a view that contains and positions other views. A screen is a <b>tree</b> of them, usually described in an XML file in <code>res/layout/</code> and turned into objects (“inflated”) at runtime.</p>
+          <script type="text/plain" data-code="xml" data-file="res/layout/activity_profile.xml" data-numbered>
+            <?xml version="1.0" encoding="utf-8"?>
+            <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:id="@+id/name_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/hello"
+                    android:textAppearance="?attr/textAppearanceHeadlineSmall" />
+
+                <Button
+                    android:id="@+id/greet_button"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/greet" />
+            </LinearLayout>
+          </script>
+          <dl class="kv">
+            <dt><code>android:id="@+id/…"</code></dt><dd>Creates an ID so code can find the view (<code>+</code> = create it).</dd>
+            <dt><code>layout_width/height</code></dt><dd><code>match_parent</code> (fill the parent), <code>wrap_content</code> (as big as the content), or a size in <code>dp</code>. <code>0dp</code> means “let constraints/weights decide”.</dd>
+            <dt><code>padding</code> vs <code>layout_margin</code></dt><dd>Space <em>inside</em> the view's border vs <em>outside</em> it.</dd>
+            <dt><code>?attr/…</code></dt><dd>A value from the current theme — it adapts to light/dark mode and Material You colours.</dd>
+          </dl>
+          <p class="small muted">Open a layout and switch between <b>Code</b>, <b>Split</b> and <b>Design</b> (top right). The Design view lets you drag widgets, the Attributes panel edits properties, and <code>tools:text="…"</code> shows sample data in the preview only.</p>
+        </section>
+
+        <section class="doc-section" id="layouts" data-title="Choosing a layout">
+          <div class="sec-head"><h2><span class="sec-num">19.2</span>Choosing a layout</h2></div>
+          <div class="table-wrap">
+            <table class="t">
+              <thead><tr><th>Layout</th><th>Positions children…</th><th>Use for</th></tr></thead>
+              <tbody>
+                <tr><td><code>LinearLayout</code></td><td>in a row or column; <code>layout_weight</code> shares leftover space</td><td>simple forms, toolbars, rows</td></tr>
+                <tr><td><code>FrameLayout</code></td><td>stacked on top of each other</td><td>a list with an “empty” message over it, single-child containers</td></tr>
+                <tr><td><code>ConstraintLayout</code></td><td>by constraints relative to siblings and parent</td><td>complex screens without nesting</td></tr>
+                <tr><td><code>CoordinatorLayout</code></td><td>with behaviours (scrolling app bar, FAB above Snackbar)</td><td>screen roots with Material app bars</td></tr>
+                <tr><td><code>ScrollView</code></td><td>one child, scrollable</td><td>forms taller than the screen</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <script type="text/plain" data-code="xml" data-file="ConstraintLayout — a card row">
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="16dp">
+
+                <ImageView
+                    android:id="@+id/avatar"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:contentDescription="@string/avatar"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+                <TextView
+                    android:id="@+id/title"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="16dp"
+                    app:layout_constraintStart_toEndOf="@id/avatar"
+                    app:layout_constraintEnd_toStartOf="@id/amount"
+                    app:layout_constraintTop_toTopOf="@id/avatar" />
+
+                <TextView
+                    android:id="@+id/amount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintBaseline_toBaselineOf="@id/title" />
+            </androidx.constraintlayout.widget.ConstraintLayout>
+          </script>
+          <p class="small muted">Every view in a ConstraintLayout needs at least one horizontal and one vertical constraint. <code>0dp</code> (“match constraints”) makes <code>title</code> stretch between the avatar and the amount.</p>
+        </section>
+
+        <section class="doc-section" id="view-binding" data-title="View Binding">
+          <div class="sec-head"><h2><span class="sec-num">19.3</span>View Binding: type-safe access to views</h2></div>
+          <p>With <code>buildFeatures { viewBinding = true }</code>, Gradle generates a class per layout — <code>activity_profile.xml</code> → <code>ActivityProfileBinding</code> — with a typed field for every view that has an ID (<code>name_label</code> → <code>nameLabel</code>). No casts, no nulls, no “wrong layout” crashes.</p>
+          <div class="compare">
+            <div><div class="cmp-label c-orange">findViewById (old)</div>
+              <script type="text/plain" data-code="java" data-file="Old.java">
+                setContentView(R.layout.activity_profile);
+                TextView label = findViewById(R.id.name_label);
+                Button button = findViewById(R.id.greet_button);
+                // wrong ID or wrong layout → null → crash later
+              </script>
+            </div>
+            <div><div class="cmp-label c-primary">View Binding</div>
+              <script type="text/plain" data-code="java" data-file="ProfileActivity.java">
+                binding = ActivityProfileBinding.inflate(getLayoutInflater());
+                setContentView(binding.getRoot());
+                binding.greetButton.setOnClickListener(v ->
+                        binding.nameLabel.setText(getString(R.string.hello_name, "Ada")));
+              </script>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="input" data-title="Events & text input">
+          <div class="sec-head"><h2><span class="sec-num">19.4</span>Events, text input and validation</h2></div>
+          <p>Material's <code>TextInputLayout</code> wraps an <code>EditText</code> with a floating label, helper text, counter and error message:</p>
+          <script type="text/plain" data-code="xml" data-file="res/layout/activity_sign_up.xml (excerpt)">
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/email_layout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/email">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/email_input"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:imeOptions="actionDone"
+                    android:inputType="textEmailAddress" />
+            </com.google.android.material.textfield.TextInputLayout>
+          </script>
+          <script type="text/plain" data-code="java" data-file="SignUpActivity.java" data-numbered>
+            public class SignUpActivity extends AppCompatActivity {
+                private ActivitySignUpBinding binding;
+
+                @Override
+                protected void onCreate(Bundle savedInstanceState) {
+                    super.onCreate(savedInstanceState);
+                    binding = ActivitySignUpBinding.inflate(getLayoutInflater());
+                    setContentView(binding.getRoot());
+
+                    binding.submitButton.setOnClickListener(v -> submit());
+
+                    // React while typing: clear the error as soon as the user edits
+                    binding.emailInput.addTextChangedListener(new TextWatcher() {
+                        @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
+                        @Override public void onTextChanged(CharSequence s, int start, int before, int count) { }
+                        @Override public void afterTextChanged(Editable s) { binding.emailLayout.setError(null); }
+                    });
+
+                    // The keyboard's "Done" key submits too
+                    binding.emailInput.setOnEditorActionListener((view, actionId, event) -> {
+                        if (actionId == EditorInfo.IME_ACTION_DONE) { submit(); return true; }
+                        return false;
+                    });
+                }
+
+                private void submit() {
+                    String email = String.valueOf(binding.emailInput.getText()).trim();
+                    if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+                        binding.emailLayout.setError(getString(R.string.error_email));
+                        return;
+                    }
+                    Toast.makeText(this, getString(R.string.welcome, email), Toast.LENGTH_SHORT).show();
+                }
+            }
+          </script>
+          <p class="small muted">Common listeners: <code>setOnClickListener</code>, <code>setOnLongClickListener</code>, <code>setOnCheckedChangeListener</code> (switches, chips), <code>addTextChangedListener</code>. All take lambdas (lesson 13) except multi-method interfaces like <code>TextWatcher</code>.</p>
+        </section>
+
+        <section class="doc-section" id="recyclerview" data-title="RecyclerView & ListAdapter">
+          <div class="sec-head"><h2><span class="sec-num">19.5</span>Lists with RecyclerView, ListAdapter and DiffUtil</h2></div>
+          <p>A list of 10,000 expenses can't create 10,000 row views. <code>RecyclerView</code> creates only enough rows to fill the screen and <b>recycles</b> them as you scroll, re-binding each to new data. You provide three pieces:</p>
+          <div class="flow">
+            <div class="fbox">LayoutManager<small>arranges rows (linear, grid)</small></div><span class="farrow">+</span>
+            <div class="fbox">ViewHolder<small>holds one row's views</small></div><span class="farrow">+</span>
+            <div class="fbox">Adapter<small>data → ViewHolders</small></div>
+          </div>
+          <p><code>ListAdapter</code> + <code>DiffUtil</code> compute what changed between the old and new list on a background thread, so you just call <code>submitList(newList)</code> and get correct, animated updates. Here is the essence of Spendly's adapter:</p>
+          <script type="text/plain" data-code="java" data-file="ExpenseAdapter.java" data-numbered>
+            public final class ExpenseAdapter extends ListAdapter<Expense, ExpenseAdapter.Holder> {
+
+                private static final DiffUtil.ItemCallback<Expense> DIFF = new DiffUtil.ItemCallback<>() {
+                    @Override public boolean areItemsTheSame(@NonNull Expense a, @NonNull Expense b) {
+                        return a.id() == b.id();                 // same row?
+                    }
+                    @Override public boolean areContentsTheSame(@NonNull Expense a, @NonNull Expense b) {
+                        return a.equals(b);                      // same data? (records implement equals)
+                    }
+                };
+
+                private final Consumer<Expense> onClick;
+
+                public ExpenseAdapter(Consumer<Expense> onClick) {
+                    super(DIFF);
+                    this.onClick = onClick;
+                }
+
+                @NonNull @Override
+                public Holder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {   // called rarely
+                    ItemExpenseBinding b = ItemExpenseBinding.inflate(LayoutInflater.from(parent.getContext()), parent, false);
+                    return new Holder(b);
+                }
+
+                @Override
+                public void onBindViewHolder(@NonNull Holder holder, int position) {          // called a lot: keep it cheap
+                    holder.bind(getItem(position));
+                }
+
+                final class Holder extends RecyclerView.ViewHolder {
+                    private final ItemExpenseBinding b;
+
+                    Holder(ItemExpenseBinding binding) {
+                        super(binding.getRoot());
+                        b = binding;
+                        b.getRoot().setOnClickListener(v -> {       // set listeners once, not in bind()
+                            int pos = getBindingAdapterPosition();
+                            if (pos != RecyclerView.NO_POSITION) onClick.accept(getItem(pos));
+                        });
+                    }
+
+                    void bind(Expense e) {
+                        b.title.setText(e.title());
+                        b.amount.setText(Money.format(e.amountCents(), "USD", Locale.getDefault()));
+                    }
+                }
+            }
+          </script>
+          <script type="text/plain" data-code="java" data-file="MainActivity.java (excerpt)">
+            ExpenseAdapter adapter = new ExpenseAdapter(expense -> openEditor(expense));
+            binding.list.setLayoutManager(new LinearLayoutManager(this));
+            binding.list.setAdapter(adapter);
+            adapter.submitList(expenses);          // later: submitList(newList) — DiffUtil animates the changes
+
+            // Swipe to delete
+            new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT) {
+                @Override public boolean onMove(@NonNull RecyclerView rv, @NonNull RecyclerView.ViewHolder a,
+                                                @NonNull RecyclerView.ViewHolder b) { return false; }
+                @Override public void onSwiped(@NonNull RecyclerView.ViewHolder holder, int direction) {
+                    viewModel.delete(adapter.getCurrentList().get(holder.getBindingAdapterPosition()));
+                }
+            }).attachToRecyclerView(binding.list);
+          </script>
+          <div class="callout warn">
+            <div class="ci">⚠️</div>
+            <div><span class="ct">submitList needs a new list</span>
+              <p>DiffUtil compares the old list object with the new one. If you mutate the same <code>ArrayList</code> and submit it again, nothing updates. Always submit a fresh (preferably immutable) list — which is what immutable state from a ViewModel gives you for free (lesson 20).</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="material" data-title="Material components">
+          <div class="sec-head"><h2><span class="sec-num">19.6</span>Material 3 components</h2></div>
+          <p>The <code>com.google.android.material:material</code> library provides Google's Material Design 3 widgets. With a <code>Theme.Material3.*</code> app theme they adapt to light/dark mode and, on Android 12+, to the user's wallpaper colours (<code>DynamicColors</code>).</p>
+          <div class="grid grid-3">
+            <div class="glass card"><h4>Buttons</h4><p class="small"><code>MaterialButton</code> (filled, tonal, outlined, text, icon), <code>FloatingActionButton</code> for the main action.</p></div>
+            <div class="glass card"><h4>Containers</h4><p class="small"><code>MaterialCardView</code>, <code>MaterialToolbar</code> in an <code>AppBarLayout</code>, bottom sheets.</p></div>
+            <div class="glass card"><h4>Selection</h4><p class="small"><code>Chip</code>/<code>ChipGroup</code>, <code>MaterialSwitch</code>, <code>MaterialRadioButton</code>, <code>Slider</code>.</p></div>
+          </div>
+          <script type="text/plain" data-code="java" data-file="Feedback & dialogs">
+            // Snackbar with an action — anchored above the FAB
+            Snackbar.make(binding.coordinator, getString(R.string.deleted, expense.title()), Snackbar.LENGTH_LONG)
+                    .setAction(R.string.undo, v -> viewModel.undoDelete())
+                    .setAnchorView(binding.fab)
+                    .show();
+
+            // Confirmation dialog
+            new MaterialAlertDialogBuilder(this)
+                    .setTitle(R.string.delete_title)
+                    .setMessage(R.string.delete_message)
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .setPositiveButton(R.string.delete, (dialog, which) -> viewModel.delete())
+                    .show();
+
+            // Date picker that only allows past dates
+            MaterialDatePicker<Long> picker = MaterialDatePicker.Builder.datePicker()
+                    .setCalendarConstraints(new CalendarConstraints.Builder()
+                            .setValidator(DateValidatorPointBackward.now()).build())
+                    .build();
+            picker.addOnPositiveButtonClickListener(millis ->
+                    viewModel.selectDate(Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate()));
+            picker.show(getSupportFragmentManager(), "date_picker");
+          </script>
+        </section>
+
+        <section class="doc-section" id="themes" data-title="Themes, dark mode & insets">
+          <div class="sec-head"><h2><span class="sec-num">19.7</span>Themes, dark mode and edge-to-edge</h2></div>
+          <script type="text/plain" data-code="xml" data-file="res/values/themes.xml">
+            <resources>
+                <style name="Theme.Spendly" parent="Theme.Material3.DayNight.NoActionBar">
+                    <item name="colorPrimary">#006A60</item>
+                    <item name="colorPrimaryContainer">#74F8E5</item>
+                </style>
+            </resources>
+          </script>
+          <ul>
+            <li><b>DayNight</b> themes switch automatically; put dark overrides in <code>values-night/themes.xml</code>. Force a mode in code with <code>AppCompatDelegate.setDefaultNightMode(MODE_NIGHT_YES)</code> — Spendly's settings screen does.</li>
+            <li>Refer to theme colours (<code>?attr/colorPrimary</code>) instead of hard-coded hex values in layouts, so dark mode and dynamic colour just work.</li>
+            <li><b>Edge-to-edge</b>: apps targeting Android 15+ draw behind the status and navigation bars. Call <code>EdgeToEdge.enable(this)</code> and pad your content with the system-bar <b>insets</b>:</li>
+          </ul>
+          <script type="text/plain" data-code="java" data-file="SystemBars.java">
+            public static void padForSystemBars(View root) {
+                ViewCompat.setOnApplyWindowInsetsListener(root, (view, insets) -> {
+                    Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.ime());
+                    view.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+                    return WindowInsetsCompat.CONSUMED;
+                });
+            }
+          </script>
+        </section>
+
+        <section class="doc-section" id="a11y" data-title="Accessibility">
+          <div class="sec-head"><h2><span class="sec-num">19.8</span>Accessibility basics</h2></div>
+          <ul class="checklist">
+            <li>Every icon-only button and meaningful image has a <code>contentDescription</code>; decorative images use <code>importantForAccessibility="no"</code>.</li>
+            <li>Touch targets are at least <b>48 × 48 dp</b>.</li>
+            <li>Text uses <code>sp</code> and survives the largest font size without being cut off.</li>
+            <li>Colour is never the only signal (pair a red amount with a minus sign or icon) and contrast is sufficient.</li>
+            <li>Test with <b>TalkBack</b> on and with Android Studio's <b>Accessibility Scanner</b>/layout inspector warnings.</li>
+          </ul>
+        </section>
+
+        <section class="doc-section" id="exercises" data-title="Exercises">
+          <div class="sec-head"><h2><span class="sec-num">19.9</span>Exercises</h2></div>
+          <details class="exercise">
+            <summary>Exercise 1 — Tip calculator screen <span class="badge green">Easy</span></summary>
+            <div class="ex-body">
+              <p>Build a screen with a bill-amount <code>TextInputLayout</code>, a <code>ChipGroup</code> for 10 / 15 / 20 %, and a <code>TextView</code> that shows the tip and total, updating as the user types or picks a chip. Use View Binding.</p>
+              <script type="text/plain" data-code="java" data-file="Solution — TipActivity.java">
+                public class TipActivity extends AppCompatActivity {
+                    private ActivityTipBinding binding;
+
+                    @Override
+                    protected void onCreate(Bundle savedInstanceState) {
+                        super.onCreate(savedInstanceState);
+                        binding = ActivityTipBinding.inflate(getLayoutInflater());
+                        setContentView(binding.getRoot());
+                        binding.percentChips.setOnCheckedStateChangeListener((group, ids) -> update());
+                        binding.billInput.addTextChangedListener(new TextWatcher() {
+                            @Override public void beforeTextChanged(CharSequence s, int a, int b, int c) { }
+                            @Override public void onTextChanged(CharSequence s, int a, int b, int c) { }
+                            @Override public void afterTextChanged(Editable s) { update(); }
+                        });
+                    }
+
+                    private void update() {
+                        OptionalLong bill = Money.parseCents(String.valueOf(binding.billInput.getText()));
+                        int id = binding.percentChips.getCheckedChipId();
+                        int percent = id == R.id.chip10 ? 10 : id == R.id.chip20 ? 20 : 15;
+                        if (bill.isEmpty()) { binding.result.setText(""); return; }
+                        long tip = Math.round(bill.getAsLong() * percent / 100.0);
+                        binding.result.setText(getString(R.string.tip_result,
+                                Money.format(tip, "USD", Locale.getDefault()),
+                                Money.format(bill.getAsLong() + tip, "USD", Locale.getDefault())));
+                    }
+                }
+              </script>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 2 — A contacts list <span class="badge blue">Medium</span></summary>
+            <div class="ex-body">
+              <p>Show a list of <code>record Contact(long id, String name, String phone)</code> in a RecyclerView with a <code>ListAdapter</code>. Tapping a row opens the dialler with an implicit intent (<code>Intent.ACTION_DIAL</code>, <code>Uri.parse("tel:" + phone)</code>). Add a search field that filters by name and submits a new list on every keystroke.</p>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 3 — Landscape layout <span class="badge amber">Challenge</span></summary>
+            <div class="ex-body">
+              <p>Create <code>res/layout-land/activity_main.xml</code> for your tip calculator that places the input on the left and the result on the right using ConstraintLayout and a vertical <code>Guideline</code> at 50 %. Keep the same IDs — your Java code doesn't change at all. Why?</p>
+              <p class="small muted">View Binding generates one class per layout <em>name</em>; both variants share the IDs, so the same fields exist. Android picks the right file at inflation time.</p>
+            </div>
+          </details>
+        </section>
+
+        <section class="doc-section" id="quiz" data-title="Quiz">
+          <div class="sec-head"><h2><span class="sec-num">19.10</span>Quiz</h2></div>
+          <script type="application/json" data-quiz>
+          [
+            {"q": "Which class does View Binding generate for `item_expense.xml`?", "options": ["`ItemExpense`", "`ItemExpenseBinding`", "`ItemExpenseView`", "`R.layout.ItemExpense`"], "answer": 1, "explain": "The layout name in PascalCase + `Binding`. Views with IDs become fields (snake_case → camelCase)."},
+            {"q": "Why does RecyclerView scale to thousands of items?", "options": ["It loads items lazily from the database", "It creates only enough row views to fill the screen and recycles them while scrolling", "It renders rows as bitmaps", "It uses multiple threads to draw"], "answer": 1, "explain": "Only a handful of ViewHolders exist; onBindViewHolder re-fills them with new data."},
+            {"q": "`areItemsTheSame` in a DiffUtil callback should compare…", "options": ["All fields", "The stable identity, such as the database id", "The object references", "The positions"], "answer": 1, "explain": "areItemsTheSame decides whether two entries represent the same row; areContentsTheSame then checks whether its data changed."},
+            {"q": "What does `layout_width=\"0dp\"` mean inside a ConstraintLayout?", "options": ["The view is invisible", "Match constraints: the width is determined by the start/end constraints", "Wrap content", "An error"], "answer": 1, "explain": "0dp (match_constraint) stretches the view between its constraints; in LinearLayout it is used with layout_weight."},
+            {"q": "Where should a dark-theme colour override go?", "options": ["`res/values-dark/`", "`res/values-night/`", "In Java with an if", "`res/night/values.xml`"], "answer": 1, "explain": "The `night` qualifier is selected when dark mode is active; DayNight themes switch automatically."}
+          ]
+          </script>
+        </section>
+
+        <section class="doc-section" id="references" data-title="Further reading">
+          <div class="sec-head"><h2><span class="sec-num">19.11</span>Further reading</h2></div>
+          <ul>
+            <li><a href="https://developer.android.com/develop/ui/views/layout/declaring-layout" target="_blank" rel="noopener">Layouts in views</a> · <a href="https://developer.android.com/develop/ui/views/layout/constraint-layout" target="_blank" rel="noopener">ConstraintLayout</a></li>
+            <li><a href="https://developer.android.com/topic/libraries/view-binding" target="_blank" rel="noopener">View Binding</a></li>
+            <li><a href="https://developer.android.com/develop/ui/views/layout/recyclerview" target="_blank" rel="noopener">Create dynamic lists with RecyclerView</a></li>
+            <li><a href="https://m3.material.io/develop/android/mdc-android" target="_blank" rel="noopener">Material Components for Android</a> · <a href="https://developer.android.com/develop/ui/views/layout/edge-to-edge" target="_blank" rel="noopener">Edge-to-edge</a></li>
+          </ul>
+        </section>
+
+        <div id="pager"></div>
+      </div>
+    </main>
+  </div>
+  <div id="site-footer"></div>
+  <script src="assets/js/core.js?v=__BUILD__"></script>
+</body>
+</html>

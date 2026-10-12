@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Data, Networking &amp; Background Work — Java Academy</title>
+  <meta name="description" content="Android data in Java: SharedPreferences, Room entities, DAOs and migrations, HttpURLConnection and Retrofit, JSON with Gson, notifications and WorkManager.">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="assets/css/main.css?v=__BUILD__">
+  <script>try{var t=localStorage.getItem("ja-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body data-page="data">
+  <div id="site-header"></div>
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+      <div class="content-inner">
+
+        <header class="page-hero">
+          <nav class="crumbs"><a href="index.html">Home</a><span>/</span><span>Android with Java</span><span>/</span><span>Lesson 21</span></nav>
+          <div class="eyebrow">Lesson 21 · Android with Java</div>
+          <h1>Data, Networking &amp; Background Work</h1>
+          <p class="lead">Real apps remember things and talk to the internet. Store preferences, build a Room database, call web APIs with HttpURLConnection or Retrofit, parse JSON with Gson, and schedule reliable background work and notifications with WorkManager — all from Java.</p>
+          <div class="page-meta"><span>⏱ 70 min</span><span>🎯 Advanced</span><span>🧩 Prerequisite: lessons 14–15, 20</span></div>
+          <div class="objectives">
+            <h4>You will be able to</h4>
+            <ul>
+              <li>Pick the right storage for each kind of data</li>
+              <li>Save settings with SharedPreferences</li>
+              <li>Model, query and migrate a Room database</li>
+              <li>Call REST APIs and parse JSON safely</li>
+              <li>Show notifications with runtime permission</li>
+              <li>Schedule work that survives app restarts with WorkManager</li>
+            </ul>
+          </div>
+        </header>
+
+        <section class="doc-section" id="choosing" data-title="Choosing storage">
+          <div class="sec-head"><h2><span class="sec-num">21.1</span>Choosing where data lives</h2></div>
+          <div class="table-wrap">
+            <table class="t">
+              <thead><tr><th>Data</th><th>Store in</th><th>Example</th></tr></thead>
+              <tbody>
+                <tr><td>A few user preferences</td><td><b>SharedPreferences</b> (or Jetpack DataStore)</td><td>currency, theme, “reminder on”</td></tr>
+                <tr><td>Structured records you query, sort, filter</td><td><b>Room</b> (SQLite)</td><td>expenses, messages, cached API results</td></tr>
+                <tr><td>Blobs: images, exports, downloads</td><td>App-specific files (<code>getFilesDir()</code>, lesson 14)</td><td>receipt photos, CSV export</td></tr>
+                <tr><td>Data owned by a server</td><td>The <b>network</b>, cached in Room</td><td>exchange rates, user profile</td></tr>
+                <tr><td>Short-lived screen state</td><td>ViewModel / saved instance state</td><td>search query, scroll position</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="doc-section" id="prefs" data-title="SharedPreferences">
+          <div class="sec-head"><h2><span class="sec-num">21.2</span>SharedPreferences</h2></div>
+          <p>A small key-value XML file per name. Reads are cached in memory; <code>apply()</code> writes asynchronously (use it), <code>commit()</code> blocks.</p>
+          <script type="text/plain" data-code="java" data-file="SharedPrefsSettingsStore.java (excerpt)">
+            private final SharedPreferences prefs;
+
+            public SharedPrefsSettingsStore(Context context) {
+                prefs = context.getApplicationContext().getSharedPreferences("settings", Context.MODE_PRIVATE);
+            }
+
+            public Settings read() {
+                return new Settings(
+                        prefs.getString("currency", "USD"),                          // default if missing
+                        prefs.getString("convert_to", "EUR"),
+                        ThemeMode.fromName(prefs.getString("theme", "SYSTEM")),      // enums: store name()
+                        prefs.getBoolean("daily_reminder", false));
+            }
+
+            public void update(Settings s) {
+                prefs.edit()
+                        .putString("currency", s.currency())
+                        .putString("convert_to", s.convertTo())
+                        .putString("theme", s.theme().name())
+                        .putBoolean("daily_reminder", s.dailyReminder())
+                        .apply();                                                   // async write
+            }
+          </script>
+          <p class="small muted">Jetpack <b>DataStore</b> is the modern, transactional replacement, designed around Kotlin coroutines/Flow (with RxJava and Guava adapters for Java). For a handful of Java-app settings, SharedPreferences remains simple and fine. Never store passwords or tokens in plain preferences.</p>
+        </section>
+
+        <section class="doc-section" id="room" data-title="Room">
+          <div class="sec-head"><h2><span class="sec-num">21.3</span>Room: a type-safe SQLite database</h2></div>
+          <p>Room is an abstraction over SQLite. You write an <b>entity</b> (table), a <b>DAO</b> (queries) and a <b>database</b> class; Room's annotation processor checks your SQL against the schema <em>at compile time</em> and generates the implementation.</p>
+          <script type="text/plain" data-code="kts" data-file="app/build.gradle.kts">
+            plugins {
+                alias(libs.plugins.android.application)
+                alias(libs.plugins.room)                           // schema export for migration tests
+            }
+            room { schemaDirectory("$projectDir/schemas") }
+            dependencies {
+                implementation(libs.androidx.room.runtime)
+                annotationProcessor(libs.androidx.room.compiler)   // Java: annotationProcessor (Kotlin uses ksp)
+            }
+          </script>
+          <script type="text/plain" data-code="java" data-file="ExpenseEntity.java">
+            @Entity(tableName = "expenses", indices = {@Index("date")})
+            public class ExpenseEntity {
+                @PrimaryKey(autoGenerate = true)
+                public final long id;                          // 0 → Room assigns the next id
+                @NonNull public final String title;
+                @ColumnInfo(name = "amount_cents") public final long amountCents;
+                @NonNull public final String category;         // Category.name()
+                public final long date;                        // LocalDate.toEpochDay(): sorts as a number
+                @NonNull public final String note;
+
+                public ExpenseEntity(long id, @NonNull String title, long amountCents,
+                                     @NonNull String category, long date, @NonNull String note) {
+                    this.id = id; this.title = title; this.amountCents = amountCents;
+                    this.category = category; this.date = date; this.note = note;
+                }
+            }
+          </script>
+          <script type="text/plain" data-code="java" data-file="ExpenseDao.java">
+            @Dao
+            public interface ExpenseDao {
+                @Query("SELECT * FROM expenses ORDER BY date DESC, id DESC")
+                LiveData<List<ExpenseEntity>> observeAll();        // runs in the background, re-emits on change
+
+                @Query("SELECT * FROM expenses WHERE date BETWEEN :from AND :to")
+                List<ExpenseEntity> getBetween(long from, long to); // blocking: call off the main thread
+
+                @Query("SELECT SUM(amount_cents) FROM expenses WHERE category = :category")
+                long totalFor(String category);
+
+                @Upsert void upsert(ExpenseEntity expense);         // insert or update by primary key
+                @Delete int delete(ExpenseEntity expense);
+            }
+          </script>
+          <script type="text/plain" data-code="java" data-file="SpendlyDatabase.java">
+            @Database(entities = {ExpenseEntity.class}, version = 1, exportSchema = true)
+            public abstract class SpendlyDatabase extends RoomDatabase {
+                public abstract ExpenseDao expenseDao();
+
+                public static SpendlyDatabase create(Context context) {     // build ONCE (AppContainer keeps it)
+                    return Room.databaseBuilder(context.getApplicationContext(), SpendlyDatabase.class, "spendly.db")
+                            .build();
+                }
+            }
+          </script>
+          <ul>
+            <li><b>Threading</b>: Room throws if you run a blocking query on the main thread. LiveData-returning queries are asynchronous; everything else goes through your I/O executor.</li>
+            <li><b>A typo in SQL is a compile error</b>, e.g. <em>“no such column: amount”</em> — one of Room's biggest advantages over raw SQLite.</li>
+            <li><b>Custom types</b> like <code>LocalDate</code> can be stored with a <code>@TypeConverter</code>; Spendly converts in its mapper instead, keeping the entity primitive.</li>
+          </ul>
+          <h3>Migrations</h3>
+          <p>Changing an entity changes the schema. Increase the <code>version</code> and tell Room how to transform existing data — otherwise users' data is lost or the app crashes.</p>
+          <script type="text/plain" data-code="java" data-file="Version 2: add a 'recurring' column">
+            static final Migration MIGRATION_1_2 = new Migration(1, 2) {
+                @Override
+                public void migrate(@NonNull SupportSQLiteDatabase db) {
+                    db.execSQL("ALTER TABLE expenses ADD COLUMN recurring INTEGER NOT NULL DEFAULT 0");
+                }
+            };
+
+            Room.databaseBuilder(context, SpendlyDatabase.class, "spendly.db")
+                    .addMigrations(MIGRATION_1_2)
+                    .build();
+          </script>
+          <p class="small muted">Commit the exported <code>schemas/*.json</code> files; <code>MigrationTestHelper</code> (room-testing) can then verify each migration in an instrumented test. Spendly's <code>ExpenseDaoTest</code> shows DAO tests against an in-memory database.</p>
+        </section>
+
+        <section class="doc-section" id="network" data-title="Networking">
+          <div class="sec-head"><h2><span class="sec-num">21.4</span>Calling web APIs</h2></div>
+          <p>Add <code>&lt;uses-permission android:name="android.permission.INTERNET" /&gt;</code> to the manifest. Network calls must run off the main thread (otherwise <code>NetworkOnMainThreadException</code>), and Android blocks plain <code>http://</code> by default — use HTTPS.</p>
+          <div class="tabs" data-group="http">
+            <div class="tab-list"><button data-tab="huc">HttpURLConnection (built in)</button><button data-tab="retrofit">Retrofit + Gson</button></div>
+            <div class="tab-panel" data-panel="huc">
+              <script type="text/plain" data-code="java" data-file="FrankfurterRateService.java" data-numbered>
+                public final class FrankfurterRateService implements ExchangeRateService {
+                    private static final String BASE_URL = "https://api.frankfurter.dev/v1/latest";
+
+                    @Override
+                    public double rate(String from, String to) throws IOException {   // blocking: background thread only
+                        URL url = new URL(BASE_URL + "?base=" + from + "&symbols=" + to);
+                        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                        connection.setConnectTimeout(10_000);
+                        connection.setReadTimeout(10_000);
+                        try {
+                            int code = connection.getResponseCode();
+                            if (code != HttpURLConnection.HTTP_OK) throw new IOException("HTTP " + code);
+                            try (InputStream in = connection.getInputStream()) {
+                                return RateResponseParser.parseRate(readUtf8(in), to);
+                            }
+                        } finally {
+                            connection.disconnect();
+                        }
+                    }
+                }
+              </script>
+            </div>
+            <div class="tab-panel" data-panel="retrofit">
+              <script type="text/plain" data-code="kts" data-file="app/build.gradle.kts">
+                implementation("com.squareup.retrofit2:retrofit:3.0.0")
+                implementation("com.squareup.retrofit2:converter-gson:3.0.0")
+              </script>
+              <script type="text/plain" data-code="java" data-file="RatesApi.java" data-numbered>
+                public interface RatesApi {
+                    @GET("v1/latest")
+                    Call<RatesResponse> latest(@Query("base") String base, @Query("symbols") String symbols);
+                }
+
+                public record RatesResponse(String base, String date, Map<String, Double> rates) { }
+
+                // Build once (e.g. in AppContainer):
+                RatesApi api = new Retrofit.Builder()
+                        .baseUrl("https://api.frankfurter.dev/")
+                        .addConverterFactory(GsonConverterFactory.create())
+                        .build()
+                        .create(RatesApi.class);                     // Retrofit implements the interface
+
+                // Asynchronous call: Retrofit runs it in the background, the callback arrives on the main thread
+                api.latest("USD", "EUR").enqueue(new Callback<>() {
+                    @Override public void onResponse(@NonNull Call<RatesResponse> call, @NonNull Response<RatesResponse> response) {
+                        if (response.isSuccessful() && response.body() != null) {
+                            Double eur = response.body().rates().get("EUR");
+                            // update LiveData / UI
+                        } else {
+                            // HTTP error: response.code()
+                        }
+                    }
+                    @Override public void onFailure(@NonNull Call<RatesResponse> call, @NonNull Throwable t) {
+                        // no connection, timeout, malformed JSON
+                    }
+                });
+                // Or, on your own background executor: Response<RatesResponse> r = api.latest("USD", "EUR").execute();
+              </script>
+            </div>
+          </div>
+          <div class="callout warn">
+            <div class="ci">📶</div>
+            <div><span class="ct">Networks fail — design for it</span>
+              <p>Handle no connection, timeouts, HTTP errors and malformed bodies; show a friendly message with a retry; cache the last good result. Spendly turns every failure into a <code>Conversion.FAILED</code> state the UI renders.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="json" data-title="JSON with Gson">
+          <div class="sec-head"><h2><span class="sec-num">21.5</span>JSON with Gson</h2></div>
+          <script type="text/plain" data-code="java" data-file="Gson examples">
+            Gson gson = new Gson();
+
+            // Object mapping (fields or record components ↔ JSON keys)
+            RatesResponse r = gson.fromJson(json, RatesResponse.class);
+            String out = gson.toJson(new RatesResponse("USD", "2026-03-13", Map.of("EUR", 0.92)));
+
+            // Generic types need a TypeToken because of erasure (lesson 11)
+            Type listType = new TypeToken<List<RatesResponse>>() { }.getType();
+            List<RatesResponse> history = gson.fromJson(jsonArray, listType);
+
+            // Tree model: no classes needed, no reflection (Spendly's RateResponseParser)
+            JsonObject root = JsonParser.parseString(json).getAsJsonObject();
+            double eur = root.getAsJsonObject("rates").get("EUR").getAsDouble();
+          </script>
+          <div class="callout note">
+            <div class="ci">🛡️</div>
+            <div><span class="ct">Gson and R8</span>
+              <p>Reflection-based mapping reads field names at runtime, but R8 renames fields in release builds. Annotate fields with <code>@SerializedName("rates")</code> or add <code>-keep</code> rules for your model classes (lesson 22). The tree model avoids the problem entirely.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="notifications" data-title="Notifications">
+          <div class="sec-head"><h2><span class="sec-num">21.6</span>Notifications</h2></div>
+          <ol>
+            <li><b>Create a channel</b> (required since Android 8) — users control channels in system settings.</li>
+            <li><b>Ask for permission</b> on Android 13+ (<code>POST_NOTIFICATIONS</code>, a runtime permission — lesson 18's Activity Result API).</li>
+            <li><b>Build and post</b> with <code>NotificationCompat</code>; a <code>PendingIntent</code> opens your app on tap.</li>
+          </ol>
+          <script type="text/plain" data-code="java" data-file="Notifications.java" data-numbered>
+            public static void createChannel(Context context) {
+                NotificationChannel channel = new NotificationChannel("reminders",
+                        context.getString(R.string.channel_reminders), NotificationManager.IMPORTANCE_DEFAULT);
+                context.getSystemService(NotificationManager.class).createNotificationChannel(channel);
+            }
+
+            public static void showDailyReminder(Context context) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                        && ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
+                        != PackageManager.PERMISSION_GRANTED) {
+                    return;                                       // the user said no — respect it
+                }
+                PendingIntent tap = PendingIntent.getActivity(context, 0,
+                        new Intent(context, MainActivity.class), PendingIntent.FLAG_IMMUTABLE);
+                Notification n = new NotificationCompat.Builder(context, "reminders")
+                        .setSmallIcon(R.drawable.ic_notification)  // white-on-transparent vector
+                        .setContentTitle(context.getString(R.string.reminder_title))
+                        .setContentText(context.getString(R.string.reminder_text))
+                        .setContentIntent(tap)
+                        .setAutoCancel(true)
+                        .build();
+                NotificationManagerCompat.from(context).notify(1, n);
+            }
+          </script>
+        </section>
+
+        <section class="doc-section" id="workmanager" data-title="WorkManager">
+          <div class="sec-head"><h2><span class="sec-num">21.7</span>WorkManager: reliable background work</h2></div>
+          <p>Threads die with your process. Work that must happen <em>eventually</em> — syncing, uploading, a daily reminder — belongs in <b>WorkManager</b>: it persists requests in its own database, respects battery and network constraints, survives reboots and retries failures.</p>
+          <script type="text/plain" data-code="java" data-file="ReminderWorker.java">
+            public class ReminderWorker extends Worker {
+                public ReminderWorker(@NonNull Context context, @NonNull WorkerParameters params) {
+                    super(context, params);
+                }
+
+                @NonNull @Override
+                public Result doWork() {                         // runs on a WorkManager background thread
+                    ExpenseDao dao = SpendlyApp.from(getApplicationContext()).container().database().expenseDao();
+                    long today = LocalDate.now().toEpochDay();
+                    if (dao.getBetween(today, today).isEmpty()) {
+                        Notifications.showDailyReminder(getApplicationContext());
+                    }
+                    return Result.success();                     // or Result.retry() / Result.failure()
+                }
+            }
+          </script>
+          <script type="text/plain" data-code="java" data-file="Scheduling">
+            // Periodic: once a day, first run at the next 20:00
+            Duration delay = ReminderTime.delayUntilNext(LocalDateTime.now(), LocalTime.of(20, 0));
+            PeriodicWorkRequest daily = new PeriodicWorkRequest.Builder(ReminderWorker.class, 1, TimeUnit.DAYS)
+                    .setInitialDelay(delay.toMillis(), TimeUnit.MILLISECONDS)
+                    .build();
+            WorkManager.getInstance(context)
+                    .enqueueUniquePeriodicWork("daily-expense-reminder", ExistingPeriodicWorkPolicy.UPDATE, daily);
+
+            // One-time, only on Wi-Fi while charging, with input data
+            OneTimeWorkRequest backup = new OneTimeWorkRequest.Builder(BackupWorker.class)
+                    .setConstraints(new Constraints.Builder()
+                            .setRequiredNetworkType(NetworkType.UNMETERED)
+                            .setRequiresCharging(true)
+                            .build())
+                    .setInputData(new Data.Builder().putString("format", "csv").build())
+                    .build();
+            WorkManager.getInstance(context).enqueue(backup);
+
+            // Cancel
+            WorkManager.getInstance(context).cancelUniqueWork("daily-expense-reminder");
+          </script>
+          <p class="small muted">Periodic work has a minimum interval of 15 minutes and isn't exact to the minute — Android batches work to save battery. Inspect scheduled work in Android Studio's <b>App Inspection → Background Task Inspector</b>.</p>
+        </section>
+
+        <section class="doc-section" id="exercises" data-title="Exercises">
+          <div class="sec-head"><h2><span class="sec-num">21.8</span>Exercises</h2></div>
+          <details class="exercise">
+            <summary>Exercise 1 — Remember the last query <span class="badge green">Easy</span></summary>
+            <div class="ex-body">
+              <p>Save the search query in SharedPreferences when it changes and restore it when the list screen opens. Where should the read and write live so the Activity stays thin?</p>
+              <p class="small muted">In the settings store (data layer); the ViewModel reads it in its constructor and writes on <code>setQuery</code>. The Activity just forwards text changes.</p>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 2 — A new DAO query <span class="badge blue">Medium</span></summary>
+            <div class="ex-body">
+              <p>Add <code>LiveData&lt;List&lt;CategoryTotal&gt;&gt; totalsByCategory(long from, long to)</code> to <code>ExpenseDao</code>, where <code>CategoryTotal</code> is a small class with <code>category</code> and <code>total</code> fields, using <code>GROUP BY</code>. Write a DAO test for it.</p>
+              <script type="text/plain" data-code="java" data-file="Solution">
+                public class CategoryTotal {
+                    public final String category;
+                    public final long total;
+                    public CategoryTotal(String category, long total) { this.category = category; this.total = total; }
+                }
+
+                @Query("SELECT category, SUM(amount_cents) AS total FROM expenses " +
+                       "WHERE date BETWEEN :from AND :to GROUP BY category ORDER BY total DESC")
+                LiveData<List<CategoryTotal>> totalsByCategory(long from, long to);
+              </script>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 3 — Cache exchange rates <span class="badge amber">Challenge</span></summary>
+            <div class="ex-body">
+              <p>Add a <code>rates</code> table <code>(base, target, rate, fetchedAtEpochMillis)</code> with a migration from version 1 to 2. Make the rate service return a cached rate if it's less than 12 hours old, fetch otherwise, and fall back to a stale cached rate when offline. Unit-test the decision logic with an injected <code>Clock</code>.</p>
+            </div>
+          </details>
+        </section>
+
+        <section class="doc-section" id="quiz" data-title="Quiz">
+          <div class="sec-head"><h2><span class="sec-num">21.9</span>Quiz</h2></div>
+          <script type="application/json" data-quiz>
+          [
+            {"q": "What happens if you call a blocking Room DAO method on the main thread?", "options": ["It works but is slow", "Room throws IllegalStateException", "The query is queued", "It returns null"], "answer": 1, "explain": "Room refuses main-thread database access (unless you explicitly allow it, e.g. in tests)."},
+            {"q": "You add a column to an entity in a released app. What must you do?", "options": ["Nothing", "Increase the database version and provide a Migration", "Delete the app's data", "Rename the table"], "answer": 1, "explain": "Without a migration Room can't open the old database (or would destroy data if you use fallbackToDestructiveMigration)."},
+            {"q": "Which mechanism should run a daily reminder that must work after the app is closed or the phone rebooted?", "options": ["A Thread with sleep", "An ExecutorService", "WorkManager", "A static Timer"], "answer": 2, "explain": "WorkManager persists work and reschedules it after reboots, honouring battery optimisations."},
+            {"q": "Why do Gson model classes often need keep rules in release builds?", "options": ["Gson is not compatible with Android", "R8 renames fields, but reflection-based mapping uses field names", "JSON requires public classes", "Release builds remove all libraries"], "answer": 1, "explain": "Use @SerializedName, keep rules, or the tree model."},
+            {"q": "On Android 13+, what is required before posting a notification?", "options": ["The INTERNET permission", "A granted POST_NOTIFICATIONS runtime permission (and a channel)", "A foreground service", "Nothing"], "answer": 1, "explain": "Notifications became a runtime permission in API 33; channels are required since API 26."}
+          ]
+          </script>
+        </section>
+
+        <section class="doc-section" id="references" data-title="Further reading">
+          <div class="sec-head"><h2><span class="sec-num">21.10</span>Further reading</h2></div>
+          <ul>
+            <li><a href="https://developer.android.com/training/data-storage/room" target="_blank" rel="noopener">Save data in a local database using Room</a> · <a href="https://developer.android.com/training/data-storage/room/migrating-db-versions" target="_blank" rel="noopener">Migrations</a></li>
+            <li><a href="https://square.github.io/retrofit/" target="_blank" rel="noopener">Retrofit</a> · <a href="https://github.com/google/gson/blob/main/UserGuide.md" target="_blank" rel="noopener">Gson user guide</a></li>
+            <li><a href="https://developer.android.com/develop/ui/views/notifications" target="_blank" rel="noopener">Notifications overview</a></li>
+            <li><a href="https://developer.android.com/develop/background-work/background-tasks/persistent" target="_blank" rel="noopener">WorkManager</a></li>
+          </ul>
+        </section>
+
+        <div id="pager"></div>
+      </div>
+    </main>
+  </div>
+  <div id="site-footer"></div>
+  <script src="assets/js/core.js?v=__BUILD__"></script>
+</body>
+</html>

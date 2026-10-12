@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Testing, Debugging &amp; Publishing — Java Academy</title>
+  <meta name="description" content="Instrumented and Espresso tests, debugging and profiling in Android Studio, R8, signing and publishing a Java Android app on Google Play.">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="assets/css/main.css?v=__BUILD__">
+  <script>try{var t=localStorage.getItem("ja-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body data-page="release">
+  <div id="site-header"></div>
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+      <div class="content-inner">
+
+        <header class="page-hero">
+          <nav class="crumbs"><a href="index.html">Home</a><span>/</span><span>Android with Java</span><span>/</span><span>Lesson 22</span></nav>
+          <div class="eyebrow">Lesson 22 · Android with Java</div>
+          <h1>Testing, Debugging &amp; Publishing</h1>
+          <p class="lead">The last mile: prove the app works on real devices with instrumented and UI tests, hunt bugs with Android Studio's debugger and inspectors, then shrink, sign and ship an App Bundle to Google Play.</p>
+          <div class="page-meta"><span>⏱ 50 min</span><span>🎯 Master</span><span>🧩 Prerequisite: lessons 17, 20–21</span></div>
+          <div class="objectives">
+            <h4>You will be able to</h4>
+            <ul>
+              <li>Write instrumented and Espresso UI tests</li>
+              <li>Debug with breakpoints, Logcat and inspectors</li>
+              <li>Find performance problems and memory leaks</li>
+              <li>Configure R8 and read obfuscated stack traces</li>
+              <li>Sign a release build without leaking secrets</li>
+              <li>Publish an App Bundle through Play's testing tracks</li>
+            </ul>
+          </div>
+        </header>
+
+        <section class="doc-section" id="instrumented" data-title="Instrumented & UI tests">
+          <div class="sec-head"><h2><span class="sec-num">22.1</span>Instrumented and UI tests</h2></div>
+          <p>Lesson 17 covered JVM unit tests. <b>Instrumented tests</b> live in <code>src/androidTest</code> and run on an emulator or phone with the real framework. Start a device, then click the gutter ▶ or run <code>./gradlew connectedDebugAndroidTest</code>; the report lands in <code>app/build/reports/androidTests/connected/</code>.</p>
+          <script type="text/plain" data-code="java" data-file="ExpenseDaoTest.java (excerpt)">
+            @RunWith(AndroidJUnit4.class)
+            public class ExpenseDaoTest {
+                @Rule public InstantTaskExecutorRule instantLiveData = new InstantTaskExecutorRule();
+                private SpendlyDatabase db;
+
+                @Before
+                public void createDb() {
+                    db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), SpendlyDatabase.class)
+                            .allowMainThreadQueries()          // fine in tests only
+                            .build();
+                }
+
+                @After public void closeDb() { db.close(); }
+
+                @Test
+                public void deleteThenUpsertWithSameIdRestoresTheRow() throws InterruptedException {
+                    ExpenseDao dao = db.expenseDao();
+                    dao.upsert(new ExpenseEntity(0, "Taxi", 1_850, "TRANSPORT", day("2026-03-12"), ""));
+                    ExpenseEntity taxi = await(dao.observeAll()).get(0);
+                    dao.delete(taxi);
+                    dao.upsert(taxi);                          // what "Undo" does
+                    assertEquals(taxi.id, await(dao.observeAll()).get(0).id);
+                }
+            }
+          </script>
+          <h3>Espresso: UI tests</h3>
+          <p>Espresso finds views, performs actions and checks results — and waits automatically until the UI is idle. The pattern is always <code>onView(matcher).perform(action).check(assertion)</code>:</p>
+          <script type="text/plain" data-code="java" data-file="MainActivityTest.java">
+            @RunWith(AndroidJUnit4.class)
+            public class MainActivityTest {
+                @Rule
+                public ActivityScenarioRule<MainActivity> activity = new ActivityScenarioRule<>(MainActivity.class);
+
+                @Test
+                public void addingAnExpenseShowsItInTheList() {
+                    onView(withId(R.id.fab)).perform(click());
+                    onView(withId(R.id.titleInput)).perform(typeText("Lunch"), closeSoftKeyboard());
+                    onView(withId(R.id.amountInput)).perform(typeText("9.95"), closeSoftKeyboard());
+                    onView(withId(R.id.saveButton)).perform(click());
+                    onView(withText("Lunch")).check(matches(isDisplayed()));
+                }
+            }
+          </script>
+          <p class="small muted">Turn off animations on test devices (Developer options → window/transition/animator scale = off) to avoid flakiness. Android Studio's <b>Espresso Test Recorder</b> (Run → Record Espresso Test) can generate a first draft.</p>
+        </section>
+
+        <section class="doc-section" id="debugging" data-title="Debugging">
+          <div class="sec-head"><h2><span class="sec-num">22.2</span>Debugging like a pro</h2></div>
+          <div class="table-wrap">
+            <table class="t">
+              <thead><tr><th>Tool</th><th>Use it to…</th><th>Where</th></tr></thead>
+              <tbody>
+                <tr><td><b>Breakpoints</b></td><td>pause and inspect variables, step through code (<kbd>F8</kbd> over, <kbd>F7</kbd> into, <kbd>Shift</kbd>+<kbd>F8</kbd> out)</td><td>click the gutter; Run → Debug 🐞</td></tr>
+                <tr><td>Conditional / logging breakpoints</td><td>stop only when <code>expense.id() == 42</code>; or log without stopping</td><td>right-click a breakpoint</td></tr>
+                <tr><td>Evaluate expression</td><td>run any Java expression in the paused context</td><td><kbd>Alt</kbd>+<kbd>F8</kbd></td></tr>
+                <tr><td>Attach debugger</td><td>debug an app that's already running</td><td>Run → Attach Debugger to Android Process</td></tr>
+                <tr><td><b>Logcat</b></td><td>logs and crash stack traces; filter <code>package:mine level:error</code></td><td>bottom tool window</td></tr>
+                <tr><td><b>Layout Inspector</b></td><td>see the live view tree, attributes, overdraw</td><td>Tools → Layout Inspector</td></tr>
+                <tr><td><b>App Inspection</b></td><td>query the live Room database, inspect network calls and WorkManager jobs</td><td>View → Tool Windows → App Inspection</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="callout tip">
+            <div class="ci">🕵️</div>
+            <div><span class="ct">A debugging routine that works</span>
+              <p><b>1.</b> Reproduce reliably. <b>2.</b> Read the whole stack trace — the first line of <em>your</em> code is where to look. <b>3.</b> Form a hypothesis and test it with a breakpoint, not with guesses. <b>4.</b> Write a failing test for the bug, then fix it so it never returns.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="performance" data-title="Performance & leaks">
+          <div class="sec-head"><h2><span class="sec-num">22.3</span>Performance and memory</h2></div>
+          <ul>
+            <li><b>Profiler</b> (View → Tool Windows → Profiler): CPU traces show which methods are slow; the memory profiler shows allocations and lets you capture heap dumps.</li>
+            <li><b>StrictMode</b> in debug builds flags disk and network access on the main thread:
+              <script type="text/plain" data-code="java" data-file="SpendlyApp.onCreate (debug only)">
+                if (BuildConfig.DEBUG) {
+                    StrictMode.setThreadPolicy(new StrictMode.ThreadPolicy.Builder().detectAll().penaltyLog().build());
+                    StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder().detectLeakedClosableObjects().penaltyLog().build());
+                }
+              </script>
+            </li>
+            <li><b>LeakCanary</b> (<code>debugImplementation("com.squareup.leakcanary:leakcanary-android:…")</code>) detects leaked Activities automatically and shows the reference chain — usually a static field, a listener or an inner class (lessons 09 and 20).</li>
+            <li><b>Smooth lists</b>: keep <code>onBindViewHolder</code> cheap, use <code>ListAdapter</code>, avoid nested weights and deep layouts.</li>
+          </ul>
+        </section>
+
+        <section class="doc-section" id="r8" data-title="R8: shrink & obfuscate">
+          <div class="sec-head"><h2><span class="sec-num">22.4</span>R8: shrinking, optimising and obfuscating</h2></div>
+          <p>Release builds run <b>R8</b>: it removes unused classes and methods (including from libraries), optimises bytecode, renames identifiers to short names, and with <code>isShrinkResources</code> drops unused resources. APKs often shrink by half.</p>
+          <script type="text/plain" data-code="kts" data-file="app/build.gradle.kts">
+            buildTypes {
+                release {
+                    isMinifyEnabled = true
+                    isShrinkResources = true
+                    proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+                }
+            }
+          </script>
+          <script type="text/plain" data-code="proguard" data-file="app/proguard-rules.pro">
+            # Keep classes that are only reached by reflection (e.g. Gson models without @SerializedName)
+            -keep class com.javaacademy.spendly.data.remote.dto.** { *; }
+
+            # Keep line numbers so crash reports can be de-obfuscated
+            -keepattributes SourceFile,LineNumberTable
+            -renamesourcefileattribute SourceFile
+          </script>
+          <p>Obfuscated crashes look like <code>at a.b.c(SourceFile:12)</code>. R8 writes a <b>mapping file</b> (<code>app/build/outputs/mapping/release/mapping.txt</code>); keep it for every release. Google Play deobfuscates automatically when you upload it, or use <code>retrace</code> from the command line. Always test the <em>release</em> build before shipping — R8 problems only appear there.</p>
+        </section>
+
+        <section class="doc-section" id="signing" data-title="Signing">
+          <div class="sec-head"><h2><span class="sec-num">22.5</span>Signing a release</h2></div>
+          <p>Every APK/AAB must be signed. Debug builds use an automatic debug key; releases need your own <b>upload key</b>. With <b>Play App Signing</b> (the default), Google holds the final app signing key and you sign uploads with an upload key that can be reset if lost.</p>
+          <ol class="steps">
+            <li><b>Create a keystore</b><b>Build → Generate Signed App Bundle or APK → Android App Bundle → Create new…</b>. Store the <code>.jks</code> file <em>outside</em> the repository and back it up.</li>
+            <li><b>Keep secrets out of git</b>Put paths and passwords in <code>keystore.properties</code> (listed in <code>.gitignore</code>) and read them in Gradle — exactly what Spendly's build script does. In CI, provide them as encrypted secrets.</li>
+            <li><b>Build</b><code>./gradlew bundleRelease</code> → <code>app/build/outputs/bundle/release/app-release.aab</code>.</li>
+          </ol>
+          <script type="text/plain" data-code="properties" data-file="keystore.properties (never commit!)">
+            storeFile=../keys/spendly-upload.jks
+            storePassword=••••••••
+            keyAlias=upload
+            keyPassword=••••••••
+          </script>
+          <script type="text/plain" data-code="kts" data-file="app/build.gradle.kts">
+            val keystoreProperties = Properties().apply {
+                val file = rootProject.file("keystore.properties")
+                if (file.exists()) file.inputStream().use { load(it) }
+            }
+
+            android {
+                signingConfigs {
+                    create("release") {
+                        if (keystoreProperties.isNotEmpty()) {
+                            storeFile = rootProject.file(keystoreProperties.getProperty("storeFile"))
+                            storePassword = keystoreProperties.getProperty("storePassword")
+                            keyAlias = keystoreProperties.getProperty("keyAlias")
+                            keyPassword = keystoreProperties.getProperty("keyPassword")
+                        }
+                    }
+                }
+                buildTypes {
+                    release {
+                        if (keystoreProperties.isNotEmpty()) signingConfig = signingConfigs.getByName("release")
+                    }
+                }
+            }
+          </script>
+        </section>
+
+        <section class="doc-section" id="play" data-title="Publishing on Google Play">
+          <div class="sec-head"><h2><span class="sec-num">22.6</span>Publishing on Google Play</h2></div>
+          <ol class="steps">
+            <li><b>Prepare</b>Bump <code>versionCode</code> (every upload needs a higher one) and <code>versionName</code>; check <code>targetSdk</code> meets Play's current requirement; run lint, unit and instrumented tests on the release build.</li>
+            <li><b>Play Console</b>Create a developer account and the app; fill in the store listing (title, description, screenshots, icon), content rating questionnaire, target audience and the <b>Data safety</b> form (Spendly: data stays on device; it contacts an exchange-rate API).</li>
+            <li><b>Internal testing</b>Upload the <code>.aab</code> to the internal track and install it from Play on your own devices within minutes.</li>
+            <li><b>Closed → open testing</b>Invite testers, collect feedback and crash reports. New personal developer accounts must run a closed test with a minimum number of testers before production.</li>
+            <li><b>Production with a staged rollout</b>Release to 5–20 % of users first, watch <b>Android vitals</b> (crash and ANR rates), then roll out to everyone.</li>
+          </ol>
+          <div class="callout note">
+            <div class="ci">📦</div>
+            <div><span class="ct">Why App Bundles?</span>
+              <p>An <code>.aab</code> contains everything; Play generates optimised APKs per device (only the right screen density, CPU architecture and language), so downloads are smaller. To test exactly what users get, use <code>bundletool</code> or an internal testing track.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="ci" data-title="Continuous integration">
+          <div class="sec-head"><h2><span class="sec-num">22.7</span>Automate it</h2></div>
+          <p>The repository's <code>.github/workflows/android.yml</code> builds Spendly, runs its unit tests, compiles the instrumented tests and runs Lint on every push, then uploads the reports and a debug APK. Extend it for releases: decode the keystore from a secret, run <code>bundleRelease</code>, and upload with the Play Developer API (e.g. the Gradle Play Publisher plugin or Fastlane).</p>
+          <script type="text/plain" data-code="bash" data-file="The pre-release checklist as commands">
+            $ ./gradlew lintRelease                  # Lint on the release variant
+            $ ./gradlew testReleaseUnitTest          # unit tests against release code
+            $ ./gradlew connectedAndroidTest         # instrumented tests on a device
+            $ ./gradlew bundleRelease                # signed .aab (+ mapping.txt)
+          </script>
+        </section>
+
+        <section class="doc-section" id="exercises" data-title="Exercises">
+          <div class="sec-head"><h2><span class="sec-num">22.8</span>Exercises</h2></div>
+          <details class="exercise">
+            <summary>Exercise 1 — Your first Espresso test <span class="badge green">Easy</span></summary>
+            <div class="ex-body">
+              <p>Write a UI test for lesson 19's tip calculator: type <code>40</code>, choose the 20 % chip, and check that the result text shows the expected tip and total.</p>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 2 — Break and fix a release build <span class="badge blue">Medium</span></summary>
+            <div class="ex-body">
+              <p>Add a Gson model class mapped by reflection (no <code>@SerializedName</code>) to Spendly, build <code>assembleRelease</code>, and observe the parsed fields are <code>null</code>. Fix it twice: with a <code>-keep</code> rule and with <code>@SerializedName</code>. Which do you prefer and why?</p>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 3 — Release pipeline <span class="badge amber">Challenge</span></summary>
+            <div class="ex-body">
+              <p>Extend the GitHub Actions workflow so that pushing a tag <code>v*</code> builds a signed <code>bundleRelease</code> using a base64-encoded keystore stored in repository secrets, and uploads the <code>.aab</code> and <code>mapping.txt</code> as artifacts.</p>
+            </div>
+          </details>
+        </section>
+
+        <section class="doc-section" id="quiz" data-title="Quiz">
+          <div class="sec-head"><h2><span class="sec-num">22.9</span>Quiz</h2></div>
+          <script type="application/json" data-quiz>
+          [
+            {"q": "Where do Espresso tests live and what do they need?", "options": ["`src/test`, the JVM", "`src/androidTest`, a device or emulator", "`src/main`, nothing", "`src/release`, Google Play"], "answer": 1, "explain": "UI tests drive real Activities, so they run as instrumented tests on a device."},
+            {"q": "Why must you keep `mapping.txt` for each release?", "options": ["Play requires it to install the app", "It translates obfuscated stack traces back to your class and method names", "It contains the signing key", "It speeds up the next build"], "answer": 1, "explain": "R8 renames identifiers; the mapping file is the only way to retrace crash reports for that build."},
+            {"q": "Where should keystore passwords live?", "options": ["In build.gradle.kts", "In a git-ignored keystore.properties locally, and in encrypted CI secrets", "In strings.xml", "In the README"], "answer": 1, "explain": "Never commit signing secrets."},
+            {"q": "What must change with every upload to Google Play?", "options": ["applicationId", "versionCode must increase", "The signing key", "minSdk"], "answer": 1, "explain": "versionCode is an integer that must be higher than any previously uploaded version."},
+            {"q": "What's the purpose of a staged rollout?", "options": ["To save bandwidth", "To release to a percentage of users and watch crash/ANR rates before everyone gets the update", "To test on emulators", "To skip review"], "answer": 1, "explain": "If vitals degrade you can halt the rollout before most users are affected."}
+          ]
+          </script>
+        </section>
+
+        <section class="doc-section" id="references" data-title="Further reading">
+          <div class="sec-head"><h2><span class="sec-num">22.10</span>Further reading</h2></div>
+          <ul>
+            <li><a href="https://developer.android.com/training/testing/espresso" target="_blank" rel="noopener">Espresso</a> · <a href="https://developer.android.com/training/testing/instrumented-tests" target="_blank" rel="noopener">Instrumented tests</a></li>
+            <li><a href="https://developer.android.com/studio/debug" target="_blank" rel="noopener">Debug your app</a> · <a href="https://developer.android.com/studio/profile" target="_blank" rel="noopener">Profile your app</a></li>
+            <li><a href="https://developer.android.com/build/shrink-code" target="_blank" rel="noopener">Shrink, obfuscate and optimise your app</a></li>
+            <li><a href="https://developer.android.com/studio/publish/app-signing" target="_blank" rel="noopener">Sign your app</a> · <a href="https://developer.android.com/studio/publish" target="_blank" rel="noopener">Publish your app</a></li>
+          </ul>
+        </section>
+
+        <div id="pager"></div>
+      </div>
+    </main>
+  </div>
+  <div id="site-footer"></div>
+  <script src="assets/js/core.js?v=__BUILD__"></script>
+</body>
+</html>

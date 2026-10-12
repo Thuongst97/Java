@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>App Architecture: ViewModel, LiveData &amp; Repository — Java Academy</title>
+  <meta name="description" content="Android architecture in Java: UI, ViewModel, domain and data layers, LiveData and MediatorLiveData, unidirectional data flow, repositories and dependency injection.">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="assets/css/main.css?v=__BUILD__">
+  <script>try{var t=localStorage.getItem("ja-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body data-page="architecture">
+  <div id="site-header"></div>
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+      <div class="content-inner">
+
+        <header class="page-hero">
+          <nav class="crumbs"><a href="index.html">Home</a><span>/</span><span>Android with Java</span><span>/</span><span>Lesson 20</span></nav>
+          <div class="eyebrow">Lesson 20 · Android with Java</div>
+          <h1>App Architecture: ViewModel, LiveData &amp; Repository</h1>
+          <p class="lead">An Activity that loads data, holds state, validates input and talks to the network becomes unmaintainable — and loses everything on rotation. Google's recommended architecture splits the app into layers with one job each. This lesson builds that architecture in Java, exactly as the final project uses it.</p>
+          <div class="page-meta"><span>⏱ 70 min</span><span>🎯 Advanced</span><span>🧩 Prerequisite: lessons 15, 18–19</span></div>
+          <div class="objectives">
+            <h4>You will be able to</h4>
+            <ul>
+              <li>Separate UI, state holders and data layers</li>
+              <li>Keep screen state in a ViewModel that survives rotation</li>
+              <li>Expose and combine state with LiveData</li>
+              <li>Apply unidirectional data flow with immutable state</li>
+              <li>Design repositories as the single source of truth</li>
+              <li>Wire dependencies by hand or with Hilt</li>
+            </ul>
+          </div>
+        </header>
+
+        <section class="doc-section" id="layers" data-title="Layers">
+          <div class="sec-head"><h2><span class="sec-num">20.1</span>The layers</h2></div>
+          <figure class="diagram">
+            <svg viewBox="0 0 720 300" width="720" role="img" aria-label="UI layer, ViewModel, domain, repository and data sources">
+              <defs><marker id="aa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#f89820"/></marker></defs>
+              <g font-family="Inter, sans-serif" font-size="13" text-anchor="middle">
+                <rect x="20" y="20" width="200" height="60" rx="10" fill="rgba(61,220,132,.12)" stroke="#3ddc84"/><text x="120" y="45" fill="currentColor" font-weight="700">Activity + Views</text><text x="120" y="64" fill="#9a98a8" font-size="11">render state · forward events</text>
+                <rect x="260" y="20" width="200" height="60" rx="10" fill="rgba(248,152,32,.12)" stroke="#f89820"/><text x="360" y="45" fill="currentColor" font-weight="700">ViewModel</text><text x="360" y="64" fill="#9a98a8" font-size="11">screen state · survives rotation</text>
+                <rect x="500" y="20" width="200" height="60" rx="10" fill="rgba(224,95,212,.12)" stroke="#e05fd4"/><text x="600" y="45" fill="currentColor" font-weight="700">Domain (plain Java)</text><text x="600" y="64" fill="#9a98a8" font-size="11">rules · validation · calculations</text>
+                <rect x="260" y="130" width="200" height="60" rx="10" fill="rgba(108,184,255,.12)" stroke="#6cb8ff"/><text x="360" y="155" fill="currentColor" font-weight="700">Repository</text><text x="360" y="174" fill="#9a98a8" font-size="11">single source of truth</text>
+                <rect x="140" y="230" width="160" height="50" rx="10" fill="rgba(108,184,255,.08)" stroke="#6cb8ff"/><text x="220" y="260" fill="currentColor">Room / files / prefs</text>
+                <rect x="420" y="230" width="160" height="50" rx="10" fill="rgba(108,184,255,.08)" stroke="#6cb8ff"/><text x="500" y="260" fill="currentColor">Network API</text>
+                <path d="M220 42H256" stroke="#f89820" stroke-width="2" marker-end="url(#aa)"/><text x="238" y="34" fill="#9a98a8" font-size="10">events</text>
+                <path d="M260 62H224" stroke="#3ddc84" stroke-width="2" marker-end="url(#aa)"/><text x="240" y="98" fill="#9a98a8" font-size="10">state (LiveData)</text>
+                <path d="M460 50H496" stroke="#e05fd4" stroke-width="2" marker-end="url(#aa)"/>
+                <path d="M360 80V126" stroke="#6cb8ff" stroke-width="2" marker-end="url(#aa)"/>
+                <path d="M320 190L240 226M400 190L480 226" stroke="#6cb8ff" stroke-width="2" marker-end="url(#aa)"/>
+              </g>
+            </svg>
+            <figcaption>Dependencies point downwards: the UI knows the ViewModel, the ViewModel knows the repository — never the other way round.</figcaption>
+          </figure>
+          <div class="table-wrap">
+            <table class="t">
+              <thead><tr><th>Layer</th><th>Responsibility</th><th>Must not</th><th>In Spendly</th></tr></thead>
+              <tbody>
+                <tr><td>UI</td><td>Inflate views, render state, forward user actions</td><td>hold data, do I/O, contain business rules</td><td><code>MainActivity</code>, <code>ExpenseAdapter</code></td></tr>
+                <tr><td>ViewModel</td><td>Hold and compute screen state, call repositories</td><td>reference Views, Activities or Context</td><td><code>ExpenseListViewModel</code></td></tr>
+                <tr><td>Domain</td><td>Pure business logic, framework-free</td><td>import <code>android.*</code></td><td><code>Money</code>, <code>ExpenseValidator</code>, <code>MonthlySummary</code></td></tr>
+                <tr><td>Data</td><td>Load and save data, choose sources, threading</td><td>know about screens</td><td><code>RoomExpenseRepository</code>, <code>FrankfurterRateService</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="doc-section" id="viewmodel" data-title="ViewModel">
+          <div class="sec-head"><h2><span class="sec-num">20.2</span>ViewModel: state that survives rotation</h2></div>
+          <p>A <code>ViewModel</code> is created the first time a screen asks for it and kept alive across configuration changes; it's cleared only when the screen is finished for good. Activities come and go — the ViewModel stays.</p>
+          <script type="text/plain" data-code="java" data-file="CounterViewModel.java">
+            public class CounterViewModel extends ViewModel {
+                private final MutableLiveData<Integer> count = new MutableLiveData<>(0);
+
+                public LiveData<Integer> count() { return count; }      // read-only to the outside
+
+                public void increment() {
+                    Integer current = count.getValue();
+                    count.setValue(current == null ? 1 : current + 1);
+                }
+
+                @Override
+                protected void onCleared() {
+                    // the screen is gone for good: cancel work, close resources
+                }
+            }
+          </script>
+          <script type="text/plain" data-code="java" data-file="CounterActivity.java">
+            public class CounterActivity extends AppCompatActivity {
+                @Override
+                protected void onCreate(Bundle savedInstanceState) {
+                    super.onCreate(savedInstanceState);
+                    ActivityCounterBinding binding = ActivityCounterBinding.inflate(getLayoutInflater());
+                    setContentView(binding.getRoot());
+
+                    // Same instance after rotation:
+                    CounterViewModel vm = new ViewModelProvider(this).get(CounterViewModel.class);
+
+                    vm.count().observe(this, n -> binding.countLabel.setText(String.valueOf(n)));
+                    binding.plusButton.setOnClickListener(v -> vm.increment());
+                }
+            }
+          </script>
+          <div class="callout danger">
+            <div class="ci">🚫</div>
+            <div><span class="ct">Never keep a View, Activity or Context in a ViewModel</span>
+              <p>The ViewModel outlives the Activity; holding the old Activity leaks it and its whole view tree. If you truly need a Context (rare), extend <code>AndroidViewModel</code> for the <em>application</em> context — or better, inject a repository that already has it.</p>
+            </div>
+          </div>
+          <h3>ViewModels with constructor parameters</h3>
+          <p><code>ViewModelProvider</code> can only call a no-argument constructor by itself. To pass dependencies, give it a <b>factory</b>:</p>
+          <script type="text/plain" data-code="java" data-file="ViewModelFactory.java">
+            public final class ViewModelFactory implements ViewModelProvider.Factory {
+                private final AppContainer container;
+
+                public ViewModelFactory(AppContainer container) { this.container = container; }
+
+                @NonNull @Override
+                public <T extends ViewModel> T create(@NonNull Class<T> modelClass) {
+                    if (modelClass == ExpenseListViewModel.class) {
+                        return modelClass.cast(new ExpenseListViewModel(container.expenseRepository(),
+                                container.settingsStore(), container.rateService(), container.io(), container.clock()));
+                    }
+                    throw new IllegalArgumentException("Unknown ViewModel " + modelClass.getName());
+                }
+            }
+
+            // In the Activity:
+            viewModel = new ViewModelProvider(this, SpendlyApp.from(this).container().viewModelFactory())
+                    .get(ExpenseListViewModel.class);
+          </script>
+        </section>
+
+        <section class="doc-section" id="livedata" data-title="LiveData">
+          <div class="sec-head"><h2><span class="sec-num">20.3</span>LiveData: lifecycle-aware observable state</h2></div>
+          <p><code>LiveData</code> is an observable value holder (the Observer pattern from lesson 16) that knows about lifecycles: it delivers updates only while the observer's screen is at least <em>started</em>, sends the latest value to new observers immediately, and removes observers automatically when the screen is destroyed — no leaks, no crashes from updating dead views.</p>
+          <div class="table-wrap">
+            <table class="t">
+              <thead><tr><th>Method</th><th>Thread</th><th>Notes</th></tr></thead>
+              <tbody>
+                <tr><td><code>setValue(v)</code></td><td>main thread only</td><td>observers are called synchronously</td></tr>
+                <tr><td><code>postValue(v)</code></td><td>any thread</td><td>posts to the main thread; rapid posts may be merged (only the last value is delivered)</td></tr>
+                <tr><td><code>observe(owner, observer)</code></td><td>main</td><td>lifecycle-aware; use <code>getViewLifecycleOwner()</code> in Fragments</td></tr>
+                <tr><td><code>observeForever(observer)</code></td><td>main</td><td>you must remove it yourself — tests and non-UI code only</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <h3>Combining sources with MediatorLiveData</h3>
+          <p>Screen state usually depends on several inputs. A <code>MediatorLiveData</code> listens to many sources and recomputes one result — the heart of Spendly's list screen:</p>
+          <script type="text/plain" data-code="java" data-file="ExpenseListViewModel.java (excerpt)" data-numbered>
+            private final LiveData<List<Expense>> allExpenses;                       // from Room, via the repository
+            private final MutableLiveData<YearMonth> month;
+            private final MutableLiveData<ExpenseFilter> filter = new MutableLiveData<>(ExpenseFilter.ALL);
+            private final MediatorLiveData<ExpenseListState> state = new MediatorLiveData<>();
+
+            public ExpenseListViewModel(ExpenseRepository repository, /* … */ Clock clock) {
+                this.allExpenses = repository.observeAll();
+                this.month = new MutableLiveData<>(YearMonth.now(clock));
+                state.addSource(allExpenses, ignored -> recompute());   // any input changes →
+                state.addSource(month, ignored -> recompute());         //   recompute the whole state
+                state.addSource(filter, ignored -> recompute());
+            }
+
+            private void recompute() {
+                List<Expense> all = allExpenses.getValue();
+                if (all == null) return;                                // the database hasn't answered yet
+                state.setValue(ExpenseListState.build(all, month.getValue(), filter.getValue()));  // pure domain function
+            }
+
+            public LiveData<ExpenseListState> state() { return state; }
+            public void previousMonth() { month.setValue(month.getValue().minusMonths(1)); }
+            public void setCategory(Category c) { filter.setValue(filter.getValue().withCategory(c)); }
+          </script>
+          <p class="small muted">Mapping one LiveData into another (<code>LiveData&lt;List&lt;Entity&gt;&gt;</code> → <code>LiveData&lt;List&lt;Expense&gt;&gt;</code>) is a one-source MediatorLiveData; Spendly's 10-line <code>LiveDataTransformations.map</code> shows how <code>Transformations.map</code> works inside.</p>
+        </section>
+
+        <section class="doc-section" id="udf" data-title="Unidirectional data flow">
+          <div class="sec-head"><h2><span class="sec-num">20.4</span>Unidirectional data flow and immutable UI state</h2></div>
+          <div class="flow">
+            <div class="fbox">👆 User action<small>click, type, swipe</small></div><span class="farrow">→</span>
+            <div class="fbox">ViewModel method<small>viewModel.setQuery("taxi")</small></div><span class="farrow">→</span>
+            <div class="fbox">New immutable state<small>ExpenseListState record</small></div><span class="farrow">→</span>
+            <div class="fbox">Activity renders it<small>render(state)</small></div>
+          </div>
+          <p><b>Events flow up, state flows down.</b> The Activity never changes what it shows directly; it asks the ViewModel, which publishes a complete new state object, which the Activity renders. Because the state is an immutable record built by a pure function, it's easy to test and impossible to half-update.</p>
+          <script type="text/plain" data-code="java" data-file="ExpenseListState.java">
+            public record ExpenseListState(YearMonth month, ExpenseFilter filter, List<Expense> items, MonthlySummary summary) {
+
+                public static ExpenseListState build(List<Expense> all, YearMonth month, ExpenseFilter filter) {
+                    List<Expense> items = all.stream()
+                            .filter(e -> e.month().equals(month))
+                            .filter(filter::matches)
+                            .sorted(NEWEST_FIRST)
+                            .collect(Collectors.toList());
+                    return new ExpenseListState(month, filter, items, MonthlySummary.of(all, month));
+                }
+            }
+          </script>
+          <h3>One-off events</h3>
+          <p>Some outputs are events, not state: “close this screen”, “show a Snackbar”. Model them as state the UI consumes — e.g. <code>LiveData&lt;Boolean&gt; finished</code> that the edit screen observes and reacts to with <code>finish()</code> — or let the Activity show the Snackbar directly when it triggers the action (as Spendly does for swipe-to-delete). Avoid ad-hoc “SingleLiveEvent” hacks that lose events when no observer is active.</p>
+        </section>
+
+        <section class="doc-section" id="repository" data-title="Repositories">
+          <div class="sec-head"><h2><span class="sec-num">20.5</span>Repositories: the single source of truth</h2></div>
+          <p>A repository hides <em>where</em> data comes from (database, network, cache) behind a small interface. The rest of the app depends on the interface, so a test can pass an in-memory fake.</p>
+          <script type="text/plain" data-code="java" data-file="ExpenseRepository.java">
+            public interface ExpenseRepository {
+                LiveData<List<Expense>> observeAll();     // emits again after every change
+                LiveData<Expense> observe(long id);
+                void save(Expense expense);               // asynchronous: runs on a background thread
+                void delete(Expense expense);
+            }
+          </script>
+          <script type="text/plain" data-code="java" data-file="RoomExpenseRepository.java">
+            public final class RoomExpenseRepository implements ExpenseRepository {
+                private final ExpenseDao dao;
+                private final Executor io;                // injected → tests can pass Runnable::run
+
+                public RoomExpenseRepository(ExpenseDao dao, Executor io) {
+                    this.dao = dao;
+                    this.io = io;
+                }
+
+                @Override public LiveData<List<Expense>> observeAll() {
+                    return LiveDataTransformations.map(dao.observeAll(), ExpenseMapper::toDomainList);
+                }
+
+                @Override public void save(Expense expense) {
+                    io.execute(() -> dao.upsert(ExpenseMapper.toEntity(expense)));
+                }
+                // …
+            }
+          </script>
+          <ul>
+            <li><b>Single source of truth</b>: the UI always reads from the database. Writes (and network refreshes) go into the database, and Room's LiveData pushes the change to every screen. No screen ever shows stale copies.</li>
+            <li><b>Offline-first</b>: because reads come from the local database, the app works without a connection; network data is just another writer.</li>
+            <li><b>Mappers</b> convert storage types (Room entities, JSON DTOs) to domain types, so a schema change doesn't ripple through the UI.</li>
+          </ul>
+        </section>
+
+        <section class="doc-section" id="di" data-title="Dependency injection">
+          <div class="sec-head"><h2><span class="sec-num">20.6</span>Dependency injection: by hand or with Hilt</h2></div>
+          <p>Objects shouldn't create their own dependencies (lesson 08's composition, lesson 16's testability). Something must build the graph once and hand objects out. In a small app, a hand-written <b>container</b> owned by the <code>Application</code> is enough:</p>
+          <script type="text/plain" data-code="java" data-file="AppContainer.java + SpendlyApp.java">
+            public final class AppContainer {
+                private final ExecutorService io = Executors.newFixedThreadPool(2);
+                private final SpendlyDatabase database;
+                private final ExpenseRepository expenseRepository;
+
+                public AppContainer(Context context) {
+                    database = SpendlyDatabase.create(context);
+                    expenseRepository = new RoomExpenseRepository(database.expenseDao(), io);
+                }
+
+                public ExpenseRepository expenseRepository() { return expenseRepository; }
+            }
+
+            public class SpendlyApp extends Application {        // android:name=".SpendlyApp" in the manifest
+                private AppContainer container;
+
+                @Override public void onCreate() {
+                    super.onCreate();
+                    container = new AppContainer(this);         // one container per process
+                }
+
+                public AppContainer container() { return container; }
+            }
+          </script>
+          <p>In bigger apps, <b>Hilt</b> (built on Dagger) generates this wiring at compile time from annotations — and it works the same from Java:</p>
+          <script type="text/plain" data-code="java" data-file="With Hilt">
+            @HiltAndroidApp
+            public class SpendlyApp extends Application { }
+
+            @Module
+            @InstallIn(SingletonComponent.class)
+            public final class DataModule {
+                @Provides @Singleton
+                static SpendlyDatabase database(@ApplicationContext Context context) {
+                    return SpendlyDatabase.create(context);
+                }
+                @Provides
+                static ExpenseRepository repository(SpendlyDatabase db) {
+                    return new RoomExpenseRepository(db.expenseDao(), Executors.newFixedThreadPool(2));
+                }
+            }
+
+            @HiltViewModel
+            public class ExpenseListViewModel extends ViewModel {
+                @Inject
+                public ExpenseListViewModel(ExpenseRepository repository) { /* … */ }
+            }
+
+            @AndroidEntryPoint
+            public class MainActivity extends AppCompatActivity {
+                // new ViewModelProvider(this).get(ExpenseListViewModel.class) — no factory needed
+            }
+          </script>
+          <p class="small muted">Hilt needs the <code>com.google.dagger.hilt.android</code> Gradle plugin and <code>annotationProcessor("com.google.dagger:hilt-compiler:…")</code>. Learn the manual version first: Hilt is much easier to understand once you've written its output by hand.</p>
+        </section>
+
+        <section class="doc-section" id="navigation" data-title="Screens & navigation">
+          <div class="sec-head"><h2><span class="sec-num">20.7</span>Screens, navigation and process death</h2></div>
+          <ul>
+            <li><b>Multiple activities</b> (Spendly's approach) are simple: each screen is an Activity, navigation is an Intent with extras, Back works automatically.</li>
+            <li><b>Single activity + Fragments</b> with the Navigation component suits apps with many screens, bottom navigation or shared ViewModels. Fragments have their own lifecycle; observe LiveData with <code>getViewLifecycleOwner()</code>.</li>
+            <li><b>Process death</b>: in the background Android may kill your process entirely. ViewModels are gone then, but <code>onSaveInstanceState</code> and a ViewModel's <code>SavedStateHandle</code> are restored. Persist anything important (Room, preferences) immediately rather than “on exit”. Test it with <b>Developer options → Don't keep activities</b> or the Logcat “Terminate application” button.</li>
+          </ul>
+        </section>
+
+        <section class="doc-section" id="testing" data-title="Testing the architecture">
+          <div class="sec-head"><h2><span class="sec-num">20.8</span>Payoff: everything is testable on the JVM</h2></div>
+          <p>Because the ViewModel receives its dependencies, a JVM unit test (lesson 17) can drive it with fakes — no device, no database:</p>
+          <script type="text/plain" data-code="java" data-file="ExpenseListViewModelTest.java (excerpt)">
+            @Rule public InstantTaskExecutorRule instantLiveData = new InstantTaskExecutorRule();
+
+            @Test
+            public void filtersByQueryAndCategory() {
+                viewModel.setQuery("  taxi ");
+                assertEquals(List.of(2L), ids());
+                viewModel.setQuery("");
+                viewModel.setCategory(Category.FOOD);
+                assertEquals(List.of(1L), ids());
+            }
+          </script>
+        </section>
+
+        <section class="doc-section" id="exercises" data-title="Exercises">
+          <div class="sec-head"><h2><span class="sec-num">20.9</span>Exercises</h2></div>
+          <details class="exercise">
+            <summary>Exercise 1 — Rotation-proof counter <span class="badge green">Easy</span></summary>
+            <div class="ex-body">
+              <p>Rewrite lesson 18's counter with <code>CounterViewModel</code> above and remove <code>onSaveInstanceState</code>. Rotate: the count survives. Now enable “Don't keep activities”, press Home and return — what happens, and how would <code>SavedStateHandle</code> fix it?</p>
+              <p class="small muted">The ViewModel dies with the process, so the count resets. Take a <code>SavedStateHandle</code> in the ViewModel constructor and store the count with <code>handle.getLiveData("count", 0)</code> — it's saved into the instance state for you.</p>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 2 — A notes repository <span class="badge blue">Medium</span></summary>
+            <div class="ex-body">
+              <p>Define <code>NotesRepository</code> with <code>observeAll()</code> and <code>add(String)</code>, an <code>InMemoryNotesRepository</code> backed by a <code>MutableLiveData&lt;List&lt;Note&gt;&gt;</code>, and a <code>NotesViewModel</code> that exposes the list and a <code>LiveData&lt;Boolean&gt; canAdd</code> (input non-blank). Write two JVM tests.</p>
+              <script type="text/plain" data-code="java" data-file="Solution — sketch">
+                public final class InMemoryNotesRepository implements NotesRepository {
+                    private final MutableLiveData<List<Note>> notes = new MutableLiveData<>(Collections.emptyList());
+                    private long nextId = 1;
+
+                    @Override public LiveData<List<Note>> observeAll() { return notes; }
+
+                    @Override public void add(String text) {
+                        List<Note> copy = new ArrayList<>(notes.getValue());
+                        copy.add(new Note(nextId++, text.trim()));
+                        notes.setValue(Collections.unmodifiableList(copy));   // a NEW list each time
+                    }
+                }
+              </script>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 3 — Find the architecture smells <span class="badge amber">Challenge</span></summary>
+            <div class="ex-body">
+              <p>List everything wrong with this Activity and sketch the refactored ViewModel + repository:</p>
+              <script type="text/plain" data-code="java" data-file="Task">
+                public class WeatherActivity extends AppCompatActivity {
+                    static WeatherActivity current;                         // 1
+                    private String city = "Hanoi";
+
+                    @Override protected void onCreate(Bundle s) {
+                        super.onCreate(s);
+                        setContentView(R.layout.activity_weather);
+                        current = this;
+                        String json = Http.get("https://api.example.com/" + city); // 2
+                        double t = new JSONObject(json).getDouble("temp");      // 3
+                        ((TextView) findViewById(R.id.temp)).setText(t + "°");  // 4
+                    }
+                }
+              </script>
+              <p class="small muted">1: static Activity reference → leak. 2: network on the main thread → crash. 3: parsing/business logic in the UI, untestable; no error handling. 4: findViewById + string concatenation for display; state (city, temperature) lost on rotation. Fix: <code>WeatherRepository</code> (background executor, parser, cache) → <code>WeatherViewModel</code> exposing <code>LiveData&lt;WeatherState&gt;</code> (loading/data/error) → Activity renders with View Binding.</p>
+            </div>
+          </details>
+        </section>
+
+        <section class="doc-section" id="quiz" data-title="Quiz">
+          <div class="sec-head"><h2><span class="sec-num">20.10</span>Quiz</h2></div>
+          <script type="application/json" data-quiz>
+          [
+            {"q": "What happens to a ViewModel when the phone rotates?", "options": ["It's destroyed and recreated with the Activity", "The same instance is handed to the new Activity", "It's saved to disk", "It's cleared and onCleared() is called"], "answer": 1, "explain": "ViewModels are retained across configuration changes and cleared only when the owner finishes for good."},
+            {"q": "A background thread has a result for a MutableLiveData. Which method should it call?", "options": ["`setValue`", "`postValue`", "`observe`", "`notify`"], "answer": 1, "explain": "setValue must be called on the main thread; postValue hands the value to the main thread."},
+            {"q": "Why must a ViewModel never hold a reference to an Activity?", "options": ["Activities aren't serializable", "The ViewModel outlives the Activity, so it would leak the destroyed screen", "It's slower", "LiveData forbids it"], "answer": 1, "explain": "After rotation the old Activity is destroyed; a ViewModel reference would keep it and all its views in memory."},
+            {"q": "In unidirectional data flow, how does the UI change what it displays?", "options": ["By editing views directly from click listeners", "By sending events to the ViewModel and rendering the new state it publishes", "By querying the database itself", "By recreating the Activity"], "answer": 1, "explain": "Events go up to the state holder; complete state comes down to the UI."},
+            {"q": "What is the main benefit of depending on a `ExpenseRepository` interface instead of `RoomExpenseRepository`?", "options": ["Faster database queries", "Tests (and other implementations) can be swapped in without changing the ViewModel", "Less memory", "Room requires it"], "answer": 1, "explain": "Programming to interfaces enables fakes in tests and alternative implementations (network, cache)."}
+          ]
+          </script>
+        </section>
+
+        <section class="doc-section" id="references" data-title="Further reading">
+          <div class="sec-head"><h2><span class="sec-num">20.11</span>Further reading</h2></div>
+          <ul>
+            <li><a href="https://developer.android.com/topic/architecture" target="_blank" rel="noopener">Guide to app architecture</a></li>
+            <li><a href="https://developer.android.com/topic/libraries/architecture/viewmodel" target="_blank" rel="noopener">ViewModel overview</a> · <a href="https://developer.android.com/topic/libraries/architecture/livedata" target="_blank" rel="noopener">LiveData overview</a></li>
+            <li><a href="https://developer.android.com/training/dependency-injection/manual" target="_blank" rel="noopener">Manual dependency injection</a> · <a href="https://developer.android.com/training/dependency-injection/hilt-android" target="_blank" rel="noopener">Hilt</a></li>
+          </ul>
+        </section>
+
+        <div id="pager"></div>
+      </div>
+    </main>
+  </div>
+  <div id="site-footer"></div>
+  <script src="assets/js/core.js?v=__BUILD__"></script>
+</body>
+</html>
