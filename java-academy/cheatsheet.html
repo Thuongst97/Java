@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Java Cheat Sheet &amp; Mastery Checklist — Java Academy</title>
+  <meta name="description" content="Java syntax at a glance, everyday APIs, Android Studio shortcuts, Gradle commands, Android rules of thumb and a mastery checklist.">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="assets/css/main.css?v=__BUILD__">
+  <script>try{var t=localStorage.getItem("ja-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body data-page="cheatsheet">
+  <div id="site-header"></div>
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+      <div class="content-inner">
+
+        <header class="page-hero">
+          <nav class="crumbs"><a href="index.html">Home</a><span>/</span><span>Reference</span></nav>
+          <div class="eyebrow">Reference</div>
+          <h1>Java Cheat Sheet &amp; Mastery Checklist</h1>
+          <p class="lead">Everything from the course on one page: syntax, the APIs you use daily, Android Studio shortcuts, Gradle commands, Android gotchas — and the checklist to call yourself a Java master.</p>
+          <div class="page-meta"><span>⏱ 15 min</span><span>📋 Print it: <kbd>Ctrl</kbd>+<kbd>P</kbd></span></div>
+        </header>
+
+        <section class="doc-section" id="syntax" data-title="Syntax at a glance">
+          <div class="sec-head"><h2><span class="sec-num">A.1</span>Syntax at a glance</h2></div>
+          <script type="text/plain" data-code="java" data-file="CheatSheet.java" data-run>
+            import java.util.*;
+            import java.util.stream.*;
+
+            public class CheatSheet {
+                sealed interface Shape permits Circle, Square { }
+                record Circle(double r) implements Shape { }
+                record Square(double side) implements Shape { }
+                enum Level { LOW, HIGH }
+
+                static double area(Shape s) {
+                    return switch (s) {                                // switch expression + record patterns
+                        case Circle(double r) -> Math.PI * r * r;
+                        case Square(double side) -> side * side;
+                    };
+                }
+
+                static int sum(int... xs) { int t = 0; for (int x : xs) t += x; return t; }   // varargs
+
+                public static void main(String[] args) {
+                    final int max = 3;                                  // constant
+                    var names = new ArrayList<>(List.of("Ada", "Linus", "Grace")); // inferred type
+                    String text = """
+                        Text block: %d names
+                        """.formatted(names.size());
+                    System.out.print(text);
+
+                    for (int i = 0; i < max; i++) System.out.print(i + " ");
+                    System.out.println();
+                    String level = sum(1, 2, 3) > 5 ? "big" : "small";   // ternary
+                    System.out.println(level + " " + Level.valueOf("HIGH").ordinal());
+
+                    Map<Integer, List<String>> byLength = names.stream()
+                            .collect(Collectors.groupingBy(String::length, TreeMap::new, Collectors.toList()));
+                    System.out.println(byLength);
+
+                    Optional<String> first = names.stream().filter(n -> n.startsWith("G")).findFirst();
+                    System.out.println(first.orElse("none"));
+
+                    try {
+                        Integer.parseInt("x");
+                    } catch (NumberFormatException e) {
+                        System.out.println("caught " + e.getClass().getSimpleName());
+                    }
+                    System.out.printf("%.2f %.1f%n", area(new Circle(1)), area(new Square(2)));
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            Text block: 3 names
+            0 1 2 
+            big 1
+            {3=[Ada], 5=[Linus, Grace]}
+            Grace
+            caught NumberFormatException
+            3.14 4.0
+          </script>
+        </section>
+
+        <section class="doc-section" id="types" data-title="Types & operators">
+          <div class="sec-head"><h2><span class="sec-num">A.2</span>Types, operators &amp; strings</h2></div>
+          <div class="grid grid-2">
+            <div class="table-wrap">
+              <table class="t">
+                <thead><tr><th>Type</th><th>Example</th></tr></thead>
+                <tbody>
+                  <tr><td><code>int</code> / <code>long</code></td><td><code>42</code>, <code>1_000L</code></td></tr>
+                  <tr><td><code>double</code> / <code>float</code></td><td><code>3.14</code>, <code>2.5f</code></td></tr>
+                  <tr><td><code>char</code> / <code>boolean</code></td><td><code>'A'</code>, <code>true</code></td></tr>
+                  <tr><td>Money</td><td><code>long cents</code> or <code>new BigDecimal("19.99")</code></td></tr>
+                  <tr><td>Cast</td><td><code>(int) 9.99 → 9</code>, <code>7 / 2 → 3</code>, <code>7 / 2.0 → 3.5</code></td></tr>
+                  <tr><td>Compare objects</td><td><code>a.equals(b)</code> — never <code>==</code></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="table-wrap">
+              <table class="t">
+                <thead><tr><th>String</th><th>Does</th></tr></thead>
+                <tbody>
+                  <tr><td><code>s.length()</code>, <code>s.charAt(i)</code></td><td>size, one char</td></tr>
+                  <tr><td><code>s.substring(a, b)</code></td><td>chars a..b-1</td></tr>
+                  <tr><td><code>s.trim()</code>, <code>s.split(",")</code></td><td>clean, split</td></tr>
+                  <tr><td><code>String.join("-", list)</code></td><td>join</td></tr>
+                  <tr><td><code>String.format("%.2f", x)</code></td><td>format</td></tr>
+                  <tr><td><code>new StringBuilder().append(…)</code></td><td>build in loops</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="oop" data-title="OOP">
+          <div class="sec-head"><h2><span class="sec-num">A.3</span>Object-oriented building blocks</h2></div>
+          <div class="table-wrap">
+            <table class="t">
+              <thead><tr><th>Need</th><th>Use</th></tr></thead>
+              <tbody>
+                <tr><td>Plain immutable data</td><td><code>record Point(int x, int y) { }</code></td></tr>
+                <tr><td>Fixed set of values</td><td><code>enum Category { FOOD, FUN }</code> — store <code>name()</code></td></tr>
+                <tr><td>Closed set of variants</td><td><code>sealed interface Result permits Ok, Err</code></td></tr>
+                <tr><td>A capability / contract</td><td><code>interface Payment { boolean pay(long c); }</code></td></tr>
+                <tr><td>Shared code for close relatives</td><td><code>abstract class Report</code></td></tr>
+                <tr><td>Reuse without "is a"</td><td>composition: a field + delegation</td></tr>
+                <tr><td>Value equality in a class</td><td>override <code>equals</code> <b>and</b> <code>hashCode</code></td></tr>
+                <tr><td>“Maybe a value” return</td><td><code>Optional&lt;T&gt;</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="doc-section" id="collections" data-title="Collections & streams">
+          <div class="sec-head"><h2><span class="sec-num">A.4</span>Collections &amp; streams</h2></div>
+          <div class="grid grid-2">
+            <div class="table-wrap">
+              <table class="t">
+                <thead><tr><th>Need</th><th>Use</th></tr></thead>
+                <tbody>
+                  <tr><td>Ordered list</td><td><code>ArrayList</code></td></tr>
+                  <tr><td>Unique items</td><td><code>HashSet</code> / <code>LinkedHashSet</code> / <code>TreeSet</code></td></tr>
+                  <tr><td>Key → value</td><td><code>HashMap</code> / <code>TreeMap</code> / <code>EnumMap</code></td></tr>
+                  <tr><td>Queue / stack</td><td><code>ArrayDeque</code></td></tr>
+                  <tr><td>Count things</td><td><code>map.merge(k, 1, Integer::sum)</code></td></tr>
+                  <tr><td>Group into lists</td><td><code>computeIfAbsent(k, x -&gt; new ArrayList&lt;&gt;()).add(v)</code></td></tr>
+                  <tr><td>Remove while looping</td><td><code>list.removeIf(…)</code></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <script type="text/plain" data-code="java" data-file="Streams">
+              list.stream()
+                  .filter(e -> e.cents() > 1000)          // keep
+                  .map(Expense::title)                     // transform
+                  .distinct().sorted()                     // tidy
+                  .limit(10)
+                  .collect(Collectors.toList());           // terminal
+
+              Collectors.groupingBy(Expense::category, Collectors.summingLong(Expense::cents))
+              Collectors.joining(", ")
+              Collectors.partitioningBy(e -> e.cents() > 1000)
+              IntStream.rangeClosed(1, 10).sum()
+              list.sort(Comparator.comparing(Person::age).thenComparing(Person::name));
+            </script>
+          </div>
+        </section>
+
+        <section class="doc-section" id="errors" data-title="Exceptions, I/O & threads">
+          <div class="sec-head"><h2><span class="sec-num">A.5</span>Exceptions, I/O, time &amp; threads</h2></div>
+          <script type="text/plain" data-code="java" data-file="Patterns you'll type often">
+            try (BufferedReader in = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {   // auto-close
+                String line;
+                while ((line = in.readLine()) != null) { /* … */ }
+            } catch (IOException e) {
+                throw new RepositoryException("Couldn't read " + path, e);                   // keep the cause
+            }
+
+            this.name = Objects.requireNonNull(name, "name");                                 // fail fast
+
+            LocalDate.now(clock).plusDays(30);  Duration.ofMinutes(95);  Instant.parse("2026-03-14T08:00:00Z");
+
+            ExecutorService io = Executors.newFixedThreadPool(2);
+            Future<Long> f = io.submit(() -> slowSquare(12));                               // background work
+            CompletableFuture.supplyAsync(this::load, io).thenApply(this::parse).exceptionally(e -> fallback);
+            AtomicInteger counter = new AtomicInteger();  counter.incrementAndGet();         // thread-safe
+          </script>
+        </section>
+
+        <section class="doc-section" id="shortcuts" data-title="Android Studio shortcuts">
+          <div class="sec-head"><h2><span class="sec-num">A.6</span>Android Studio shortcuts &amp; Gradle commands</h2></div>
+          <div class="grid grid-2">
+            <div class="table-wrap">
+              <table class="t">
+                <thead><tr><th>Action</th><th>Win/Linux</th><th>macOS</th></tr></thead>
+                <tbody>
+                  <tr><td>Search everywhere</td><td><kbd>Shift</kbd> <kbd>Shift</kbd></td><td><kbd>⇧</kbd> <kbd>⇧</kbd></td></tr>
+                  <tr><td>Quick fix</td><td><kbd>Alt</kbd>+<kbd>Enter</kbd></td><td><kbd>⌥</kbd>+<kbd>↩</kbd></td></tr>
+                  <tr><td>Generate…</td><td><kbd>Alt</kbd>+<kbd>Insert</kbd></td><td><kbd>⌘</kbd>+<kbd>N</kbd></td></tr>
+                  <tr><td>Run current file / test</td><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>F10</kbd></td><td><kbd>⌃</kbd>+<kbd>⇧</kbd>+<kbd>R</kbd></td></tr>
+                  <tr><td>Create / go to test</td><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>T</kbd></td><td><kbd>⌘</kbd>+<kbd>⇧</kbd>+<kbd>T</kbd></td></tr>
+                  <tr><td>Rename</td><td><kbd>Shift</kbd>+<kbd>F6</kbd></td><td><kbd>⇧</kbd>+<kbd>F6</kbd></td></tr>
+                  <tr><td>Extract method</td><td><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>M</kbd></td><td><kbd>⌘</kbd>+<kbd>⌥</kbd>+<kbd>M</kbd></td></tr>
+                  <tr><td>Reformat</td><td><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>L</kbd></td><td><kbd>⌘</kbd>+<kbd>⌥</kbd>+<kbd>L</kbd></td></tr>
+                  <tr><td>Live templates</td><td colspan="2"><code>psvm</code>, <code>sout</code>, <code>fori</code>, <code>iter</code> + <kbd>Tab</kbd></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <script type="text/plain" data-code="bash" data-file="Terminal">
+              $ ./gradlew :lessons:test                 # JUnit 5 tests of the Java module
+              $ ./gradlew assembleDebug                 # build the debug APK
+              $ ./gradlew installDebug                  # install on a device
+              $ ./gradlew testDebugUnitTest             # local unit tests (JVM)
+              $ ./gradlew connectedDebugAndroidTest     # instrumented tests (device)
+              $ ./gradlew lintDebug                     # Android Lint (NewApi, …)
+              $ ./gradlew bundleRelease                 # signed App Bundle
+              $ adb devices · adb logcat · adb install -r app.apk
+            </script>
+          </div>
+        </section>
+
+        <section class="doc-section" id="android" data-title="Android gotchas">
+          <div class="sec-head"><h2><span class="sec-num">A.7</span>Android rules of thumb</h2></div>
+          <ul class="checklist">
+            <li>Never block the main thread: database, network and file work go to a background executor or WorkManager.</li>
+            <li>Only the main thread touches views — deliver results with <code>LiveData.postValue</code>.</li>
+            <li>Keep screen state in a ViewModel; never keep Activities, Views or Contexts in ViewModels or static fields.</li>
+            <li>Java <em>language</em> features up to 17 work everywhere; Java <em>library</em> APIs depend on the device's API level (<code>List.of</code> 30, <code>strip()</code> 33, <code>Stream.toList()</code> 34) — run Lint.</li>
+            <li>Strings, colours and sizes live in <code>res/</code>; use <code>dp</code> for layout and <code>sp</code> for text.</li>
+            <li>Persist enums by <code>name()</code>, money as <code>long</code> cents, dates as epoch days or ISO strings.</li>
+            <li>Ask for runtime permissions (notifications, camera, location) when the user needs the feature.</li>
+            <li>Never commit keystores or passwords; keep <code>mapping.txt</code> for every release.</li>
+          </ul>
+        </section>
+
+        <section class="doc-section" id="checklist" data-title="Mastery checklist">
+          <div class="sec-head"><h2><span class="sec-num">A.8</span>The mastery checklist</h2></div>
+          <p>Tick these honestly. When every box is ticked, you're no longer learning Java — you're using it.</p>
+          <div class="grid grid-2">
+            <div class="glass card"><h4>Language</h4><ul class="checklist small">
+              <li>I can predict the output of expressions with casts, integer division and <code>+</code> on strings.</li>
+              <li>I explain primitives vs references, pass-by-value and the string pool.</li>
+              <li>I design immutable classes and records, and implement <code>equals</code>/<code>hashCode</code> correctly.</li>
+              <li>I choose between interface, abstract class, enum, record and sealed type deliberately.</li>
+              <li>I read generic signatures with wildcards (PECS) without fear.</li>
+            </ul></div>
+            <div class="glass card"><h4>Libraries</h4><ul class="checklist small">
+              <li>I pick the right collection for the job and know its complexity.</li>
+              <li>I write stream pipelines with grouping collectors — and know when a loop is clearer.</li>
+              <li>I handle errors with specific exceptions, causes and try-with-resources.</li>
+              <li>I use <code>java.time</code> correctly and inject a <code>Clock</code>.</li>
+              <li>I fix race conditions with synchronization, atomics or immutability.</li>
+            </ul></div>
+            <div class="glass card"><h4>Engineering</h4><ul class="checklist small">
+              <li>I set up and run unit tests in Android Studio and on the command line.</li>
+              <li>I write testable code with injected dependencies and fakes.</li>
+              <li>I debug with breakpoints instead of guessing.</li>
+              <li>I keep builds green with CI and Lint.</li>
+            </ul></div>
+            <div class="glass card"><h4>Android</h4><ul class="checklist small">
+              <li>I build screens with Views, View Binding and RecyclerView.</li>
+              <li>I structure apps in UI / ViewModel / domain / data layers.</li>
+              <li>I persist data with Room and schedule work with WorkManager.</li>
+              <li>I've built and shipped Spendly — or my own app.</li>
+            </ul></div>
+          </div>
+        </section>
+
+        <div id="pager"></div>
+      </div>
+    </main>
+  </div>
+  <div id="site-footer"></div>
+  <script src="assets/js/core.js?v=__BUILD__"></script>
+</body>
+</html>
