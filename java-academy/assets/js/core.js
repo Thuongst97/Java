@@ -81,6 +81,9 @@
     { id: "cheatsheet", file: "cheatsheet.html", num: "A", group: "Reference", level: "All", minutes: 15,
       title: "Java Cheat Sheet & Mastery Checklist", short: "Cheat Sheet", icon: "📋", accent: "#9a98a8",
       desc: "Syntax at a glance, the most-used APIs, Android Studio shortcuts and the checklist to call yourself a Java master." },
+    { id: "best-practices", file: "best-practices.html", num: "B", group: "Reference", level: "All", minutes: 60,
+      title: "Java Coding Rules & Best Practices", short: "Coding Rules & Best Practices", icon: "✅", accent: "#3ddc97",
+      desc: "Formatting, naming, methods, classes, null, exceptions, collections, concurrency, comments and Android rules — each with a bad vs good example." },
   ];
   const LESSONS = SITE.filter((p) => p.group !== "Reference");
 
@@ -128,6 +131,7 @@
           ${nav("android-basics", "Android", "android-basics.html")}
           ${nav("final-project", "Final Project", "final-project.html")}
           ${nav("cheatsheet", "Cheat Sheet", "cheatsheet.html")}
+          ${nav("best-practices", "Best Practices", "best-practices.html")}
         </nav>
         <div class="header-spacer"></div>
         <div class="global-search" role="search">
@@ -189,7 +193,7 @@
   let indexPromise = null;
   function loadIndex() {
     if (indexPromise) return indexPromise;
-    const base = SITE.map((p) => ({ title: p.title, sub: p.desc, page: p.num === "A" ? "Ref" : "Lesson " + p.num, href: p.file, text: p.desc }));
+    const base = SITE.map((p) => ({ title: p.title, sub: p.desc, page: p.group === "Reference" ? "Ref " + p.num : "Lesson " + p.num, href: p.file, text: p.desc }));
     let cached = null;
     try { cached = JSON.parse(sessionStorage.getItem("ja-index-v1") || "null"); } catch (e) { /* ignore */ }
     if (cached) return (indexPromise = Promise.resolve(base.concat(cached)));
@@ -780,7 +784,7 @@
       <div class="mod-group-title"><h3>${esc(g)}</h3></div>
       <div class="grid grid-3">${pages.map((p) => `
         <a class="module-card glass ${done.has(p.id) ? "is-done" : ""}" href="${p.file}" style="--accent:${p.accent}">
-          <div class="mc-top"><div class="mc-icon">${p.icon}</div><span class="badge ${lvl[p.level]}">${p.num === "A" ? "Ref" : p.num}</span></div>
+          <div class="mc-top"><div class="mc-icon">${p.icon}</div><span class="badge ${lvl[p.level]}">${p.group === "Reference" ? "Ref " + p.num : p.num}</span></div>
           <h3>${esc(p.title)}</h3>
           <p>${esc(p.desc)}</p>
           <div class="mc-foot"><span>⏱ ${p.minutes >= 120 ? Math.round(p.minutes / 60) + " h" : p.minutes + " min"}</span><span>· ${esc(p.level)}</span><span class="mc-go">Open →</span></div>

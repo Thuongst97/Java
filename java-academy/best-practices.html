@@ -1,0 +1,850 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Java Coding Rules &amp; Best Practices — Java Academy</title>
+  <meta name="description" content="Java coding rules and best practices with bad vs good examples: formatting, naming, methods, classes, equality, null, exceptions, collections, concurrency, comments, Android rules and a full refactoring walkthrough.">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="assets/css/main.css?v=__BUILD__">
+  <script>try{var t=localStorage.getItem("ja-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body data-page="best-practices">
+  <div id="site-header"></div>
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+      <div class="content-inner">
+
+        <header class="page-hero">
+          <nav class="crumbs"><a href="index.html">Home</a><span>/</span><span>Reference</span><span>/</span><span>B</span></nav>
+          <div class="eyebrow">Reference B · Coding rules</div>
+          <h1>Java Coding Rules &amp; Best Practices</h1>
+          <p class="lead">Code is read far more often than it's written. These are the rules professional Java and Android teams follow — each shown as a <b class="c-red">✗ Avoid</b> / <b class="c-green">✓ Prefer</b> pair with the reason behind it. Use this page as a checklist while you write and review code.</p>
+          <div class="page-meta"><span>⏱ 60 min</span><span>🎯 All levels</span><span>🧩 Builds on lessons 03–22</span></div>
+          <div class="objectives">
+            <h4>You will be able to</h4>
+            <ul>
+              <li>Format and name code the way every Java team expects</li>
+              <li>Write small, focused methods and classes</li>
+              <li>Handle null, errors and resources safely</li>
+              <li>Use collections, streams and threads without traps</li>
+              <li>Apply Android-specific rules</li>
+              <li>Refactor messy code step by step</li>
+            </ul>
+          </div>
+          <div class="callout note">
+            <div class="ci">📏</div>
+            <div><span class="ct">Where these rules come from</span>
+              <p>The <a href="https://google.github.io/styleguide/javaguide.html" target="_blank" rel="noopener">Google Java Style Guide</a>, the Android code style, Joshua Bloch's <em>Effective Java</em>, and the inspections built into Android Studio. When your team has its own style guide, it wins — consistency matters more than any single rule.</p>
+            </div>
+          </div>
+        </header>
+
+        <section class="doc-section" id="formatting" data-title="Formatting & layout">
+          <div class="sec-head"><h2><span class="sec-num">B.1</span>Formatting and layout</h2></div>
+          <ul class="checklist">
+            <li><b>Let the IDE format</b>: <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>L</kbd> (<kbd>⌘</kbd>+<kbd>⌥</kbd>+<kbd>L</kbd>), and enable <b>Settings → Tools → Actions on Save → Reformat code + Optimize imports</b>. Never argue about spaces in code review.</li>
+            <li><b>Always use braces</b>, even for one-line <code>if</code>/<code>for</code> bodies.</li>
+            <li><b>One statement per line, one variable per declaration.</b></li>
+            <li><b>Keep lines ≤ 100 characters</b>; break long call chains one call per line.</li>
+            <li><b>No wildcard imports</b> (<code>import java.util.*;</code>) — explicit imports show exactly what a file depends on.</li>
+            <li><b>Order members</b>: constants, fields, constructors, public methods, private helpers — so readers know where to look.</li>
+          </ul>
+          <div class="compare">
+            <div><div class="cmp-label c-red">✗ Avoid</div>
+              <script type="text/plain" data-code="java" data-file="Messy.java">
+                import java.util.*;
+                public class Cart{
+                  List<Item> items=new ArrayList<>();int total,count;
+                  void add(Item i){if(i==null)return;items.add(i);total+=i.price();count++;}
+                }
+              </script>
+            </div>
+            <div><div class="cmp-label c-green">✓ Prefer</div>
+              <script type="text/plain" data-code="java" data-file="Cart.java">
+                import java.util.ArrayList;
+                import java.util.List;
+
+                public class Cart {
+                    private final List<Item> items = new ArrayList<>();
+
+                    public void add(Item item) {
+                        if (item == null) {
+                            return;
+                        }
+                        items.add(item);
+                    }
+                }
+              </script>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="naming" data-title="Naming">
+          <div class="sec-head"><h2><span class="sec-num">B.2</span>Naming</h2></div>
+          <div class="table-wrap">
+            <table class="t">
+              <thead><tr><th>Element</th><th>Rule</th><th>✗ Avoid</th><th>✓ Prefer</th></tr></thead>
+              <tbody>
+                <tr><td>Class, interface, record, enum</td><td>UpperCamelCase noun</td><td><code>expenseMgr</code>, <code>Data</code></td><td><code>ExpenseRepository</code></td></tr>
+                <tr><td>Method</td><td>lowerCamelCase verb</td><td><code>Total()</code>, <code>doIt()</code></td><td><code>calculateTotal()</code></td></tr>
+                <tr><td>Boolean</td><td>reads as a question</td><td><code>flag</code>, <code>status</code></td><td><code>isValid</code>, <code>hasItems</code>, <code>canRetry</code></td></tr>
+                <tr><td>Variable</td><td>says what it holds, with units</td><td><code>d</code>, <code>temp2</code>, <code>timeout</code></td><td><code>daysUntilDue</code>, <code>timeoutMillis</code></td></tr>
+                <tr><td>Constant</td><td>UPPER_SNAKE_CASE, <code>static final</code></td><td><code>maxRetry</code></td><td><code>MAX_RETRIES</code></td></tr>
+                <tr><td>Collection</td><td>plural</td><td><code>expenseList</code></td><td><code>expenses</code></td></tr>
+                <tr><td>Package</td><td>lowercase, reversed domain</td><td><code>com.MyApp.Utils</code></td><td><code>com.example.spendly.data</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="callout tip">
+            <div class="ci">🏷️</div>
+            <div><span class="ct">The rule behind the rules</span>
+              <p>A name should make a comment unnecessary. If you need <code>// number of days until the bill is due</code> next to <code>int d</code>, rename it. Avoid abbreviations (<code>mgr</code>, <code>cnt</code>), Hungarian prefixes (<code>strName</code>, <code>mName</code> in new code) and meaningless suffixes (<code>Manager</code>, <code>Helper</code>, <code>Data</code>) when a precise word exists. Rename safely with <kbd>Shift</kbd>+<kbd>F6</kbd>.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="variables" data-title="Variables & constants">
+          <div class="sec-head"><h2><span class="sec-num">B.3</span>Variables and constants</h2></div>
+          <ul class="checklist">
+            <li><b>Declare variables in the smallest scope</b>, right where they're first used.</li>
+            <li><b>Make them <code>final</code> when they never change</b> — especially fields. Immutability removes a whole class of bugs.</li>
+            <li><b>No magic numbers or strings</b>: give them a named constant.</li>
+            <li><b>Use <code>var</code> only when the type is obvious</b> from the right-hand side.</li>
+            <li><b>Never use <code>double</code> for money</b> — use <code>long</code> cents or <code>BigDecimal</code>.</li>
+          </ul>
+          <div class="compare">
+            <div><div class="cmp-label c-red">✗ Avoid</div>
+              <script type="text/plain" data-code="java" data-file="Magic.java">
+                double price(double p, int t) {
+                    if (t == 2) return p * 0.8;      // what is 2? why 0.8?
+                    if (p > 50) return p - 5;        // why 50? why 5?
+                    return p;
+                }
+              </script>
+            </div>
+            <div><div class="cmp-label c-green">✓ Prefer</div>
+              <script type="text/plain" data-code="java" data-file="Pricing.java">
+                static final long FREE_SHIPPING_THRESHOLD_CENTS = 50_00;
+                static final long LOYALTY_DISCOUNT_CENTS = 5_00;
+                static final int STUDENT_DISCOUNT_PERCENT = 20;
+
+                long priceCents(long cents, CustomerType type) {
+                    if (type == CustomerType.STUDENT) {
+                        return cents * (100 - STUDENT_DISCOUNT_PERCENT) / 100;
+                    }
+                    if (cents > FREE_SHIPPING_THRESHOLD_CENTS) {
+                        return cents - LOYALTY_DISCOUNT_CENTS;
+                    }
+                    return cents;
+                }
+              </script>
+            </div>
+          </div>
+          <p class="small muted">Notice the second version also replaced the mysterious <code>int t</code> with an enum and the <code>double</code> with cents — three rules fixed at once.</p>
+        </section>
+
+        <section class="doc-section" id="methods" data-title="Methods">
+          <div class="sec-head"><h2><span class="sec-num">B.4</span>Methods</h2></div>
+          <ul class="checklist">
+            <li><b>One method, one job</b>, at one level of abstraction. If you can describe it with “and”, split it.</li>
+            <li><b>Short</b>: most methods fit on one screen (≈ 20 lines). Use <b>Extract Method</b> (<kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>M</kbd>).</li>
+            <li><b>Few parameters</b> (≤ 3–4). More → a record or a builder.</li>
+            <li><b>Guard clauses</b>: handle invalid cases first and return early instead of nesting.</li>
+            <li><b>No boolean flag parameters</b> — <code>render(true)</code> means nothing at the call site; make two methods.</li>
+            <li><b>Validate arguments of public methods</b> and fail fast.</li>
+            <li><b>Return values instead of printing or mutating parameters</b> (pure functions are easy to test).</li>
+          </ul>
+          <div class="compare">
+            <div><div class="cmp-label c-red">✗ Avoid: arrow code</div>
+              <script type="text/plain" data-code="java" data-file="Nested.java">
+                String shipping(Order o) {
+                    if (o != null) {
+                        if (!o.items().isEmpty()) {
+                            if (o.address() != null) {
+                                if (o.isPaid()) {
+                                    return "SHIP";
+                                } else {
+                                    return "WAIT_PAYMENT";
+                                }
+                            } else {
+                                return "NO_ADDRESS";
+                            }
+                        }
+                    }
+                    return "INVALID";
+                }
+              </script>
+            </div>
+            <div><div class="cmp-label c-green">✓ Prefer: guard clauses</div>
+              <script type="text/plain" data-code="java" data-file="Guards.java">
+                String shipping(Order order) {
+                    if (order == null || order.items().isEmpty()) {
+                        return "INVALID";
+                    }
+                    if (order.address() == null) {
+                        return "NO_ADDRESS";
+                    }
+                    if (!order.isPaid()) {
+                        return "WAIT_PAYMENT";
+                    }
+                    return "SHIP";
+                }
+              </script>
+            </div>
+          </div>
+          <div class="compare">
+            <div><div class="cmp-label c-red">✗ Avoid: flags &amp; long parameter lists</div>
+              <script type="text/plain" data-code="java" data-file="Flags.java">
+                createUser("Ada", "ada@x.io", 36, true, false, "VN", null);
+                exportReport(expenses, true);   // true = …PDF? sorted? silent?
+              </script>
+            </div>
+            <div><div class="cmp-label c-green">✓ Prefer: named types &amp; methods</div>
+              <script type="text/plain" data-code="java" data-file="Named.java">
+                createUser(new NewUser("Ada", "ada@x.io", 36, Country.VN));
+                exportReportAsPdf(expenses);
+                exportReportAsCsv(expenses);
+              </script>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="classes" data-title="Classes & objects">
+          <div class="sec-head"><h2><span class="sec-num">B.5</span>Classes and objects</h2></div>
+          <ul class="checklist">
+            <li><b>Fields <code>private</code></b>, expose behaviour rather than raw state; don't generate setters by reflex.</li>
+            <li><b>Prefer immutable types</b>: records for data, <code>final</code> fields, “wither” methods for changes.</li>
+            <li><b>Favour composition over inheritance</b>; make classes <code>final</code> unless designed for extension.</li>
+            <li><b>Program to interfaces</b> (<code>List</code>, <code>ExpenseRepository</code>) and receive dependencies in the constructor.</li>
+            <li><b>Static factory methods</b> (<code>Money.ofCents(…)</code>) or a <b>builder</b> when constructors get confusing.</li>
+            <li><b>Override <code>equals</code> and <code>hashCode</code> together</b> (or use a record), and add <code>@Override</code> everywhere.</li>
+            <li><b>Never call overridable methods from a constructor.</b></li>
+          </ul>
+          <div class="compare">
+            <div><div class="cmp-label c-red">✗ Avoid: a mutable bag of fields</div>
+              <script type="text/plain" data-code="java" data-file="Expense.java">
+                public class Expense {
+                    public String title;
+                    public double amount;           // anyone can set -1
+                    public String category;         // any typo is accepted
+
+                    public void setAmount(double a) { amount = a; }
+                }
+              </script>
+            </div>
+            <div><div class="cmp-label c-green">✓ Prefer: a validated value</div>
+              <script type="text/plain" data-code="java" data-file="Expense.java">
+                public record Expense(String title, long amountCents, Category category) {
+                    public Expense {
+                        Objects.requireNonNull(title, "title");
+                        Objects.requireNonNull(category, "category");
+                        if (amountCents <= 0) {
+                            throw new IllegalArgumentException("amountCents must be > 0");
+                        }
+                        title = title.trim();
+                    }
+
+                    public Expense withAmount(long newCents) {
+                        return new Expense(title, newCents, category);
+                    }
+                }
+              </script>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="comparisons" data-title="Equality & comparisons">
+          <div class="sec-head"><h2><span class="sec-num">B.6</span>Equality and comparisons</h2></div>
+          <p>Three bugs that pass code review every day — run this to see them:</p>
+          <script type="text/plain" data-code="java" data-file="EqualityRules.java" data-run>
+            import java.util.Comparator;
+            import java.util.List;
+            import java.util.Objects;
+
+            public class EqualityRules {
+                public static void main(String[] args) {
+                    // ✗ == on objects compares identity, not value
+                    String typed = new String("admin");
+                    System.out.println("== : " + (typed == "admin"));
+                    // ✓ equals (literal first, or Objects.equals, is null-safe)
+                    System.out.println("equals : " + "admin".equals(typed) + " " + Objects.equals(null, typed));
+
+                    // ✗ boxed numbers outside -128..127 are different objects
+                    Integer a = 1_000, b = 1_000;
+                    System.out.println("Integer == : " + (a == b) + ", equals : " + a.equals(b));
+
+                    // ✗ subtraction comparators overflow
+                    Comparator<Integer> broken = (x, y) -> x - y;
+                    // ✓ Integer.compare / Comparator.naturalOrder never overflow
+                    Comparator<Integer> safe = Integer::compare;
+                    int big = Integer.MAX_VALUE, small = -1;
+                    System.out.println("broken says MAX < -1 : " + (broken.compare(big, small) < 0));
+                    System.out.println("safe   says MAX < -1 : " + (safe.compare(big, small) < 0));
+
+                    // ✗ comparing floating point with ==
+                    System.out.println("0.1 + 0.2 == 0.3 : " + (0.1 + 0.2 == 0.3));
+                    // ✓ compare with a tolerance (or avoid doubles for exact values)
+                    System.out.println("within 1e-9 : " + (Math.abs(0.1 + 0.2 - 0.3) < 1e-9));
+
+                    List<String> sorted = List.of("b", "A", "c").stream().sorted(String.CASE_INSENSITIVE_ORDER).toList();
+                    System.out.println(sorted);
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            == : false
+            equals : true false
+            Integer == : false, equals : true
+            broken says MAX < -1 : true
+            safe   says MAX < -1 : false
+            0.1 + 0.2 == 0.3 : false
+            within 1e-9 : true
+            [A, b, c]
+          </script>
+        </section>
+
+        <section class="doc-section" id="null" data-title="Null & Optional">
+          <div class="sec-head"><h2><span class="sec-num">B.7</span>Null and Optional</h2></div>
+          <ul class="checklist">
+            <li><b>Don't return <code>null</code> for collections</b> — return an empty one.</li>
+            <li><b>Use <code>Optional</code> only as a return type</b> for “maybe absent”; never for fields or parameters, never call <code>get()</code> blindly.</li>
+            <li><b>Reject null at the boundary</b> with <code>Objects.requireNonNull(x, "x")</code>.</li>
+            <li><b>Annotate</b> with <code>@NonNull</code>/<code>@Nullable</code> (androidx.annotation) so the IDE warns you.</li>
+          </ul>
+          <div class="compare">
+            <div><div class="cmp-label c-red">✗ Avoid</div>
+              <script type="text/plain" data-code="java" data-file="Nulls.java">
+                List<Expense> findByCategory(String c) {
+                    if (!index.containsKey(c)) return null;   // every caller must remember
+                    return index.get(c);
+                }
+
+                User u = repo.find(id);
+                String city = u.getAddress().getCity();       // NPE waiting to happen
+              </script>
+            </div>
+            <div><div class="cmp-label c-green">✓ Prefer</div>
+              <script type="text/plain" data-code="java" data-file="NoNulls.java">
+                List<Expense> findByCategory(Category c) {
+                    return index.getOrDefault(c, List.of());
+                }
+
+                String city = repo.find(id)                    // Optional<User>
+                        .map(User::address)
+                        .map(Address::city)
+                        .orElse("Unknown");
+              </script>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="exceptions" data-title="Exceptions & resources">
+          <div class="sec-head"><h2><span class="sec-num">B.8</span>Exceptions and resources</h2></div>
+          <ul class="checklist">
+            <li><b>Never swallow exceptions</b> — at least log them with the exception object.</li>
+            <li><b>Catch the most specific type</b>, where you can actually handle it; never catch <code>Throwable</code> or <code>Error</code>.</li>
+            <li><b>Keep the cause</b> when wrapping: <code>new RepositoryException("…", e)</code>.</li>
+            <li><b>Unchecked for programming errors</b> (<code>IllegalArgumentException</code>, <code>IllegalStateException</code>), checked for recoverable conditions.</li>
+            <li><b>Close resources with try-with-resources</b>, never in a hand-written <code>finally</code>.</li>
+            <li><b>Don't use exceptions for control flow</b>, and don't <code>return</code> from <code>finally</code>.</li>
+          </ul>
+          <div class="compare">
+            <div><div class="cmp-label c-red">✗ Avoid</div>
+              <script type="text/plain" data-code="java" data-file="BadErrors.java">
+                String load(String path) {
+                    BufferedReader r = null;
+                    try {
+                        r = new BufferedReader(new FileReader(path));
+                        return r.readLine();
+                    } catch (Exception e) {
+                        return null;                 // swallowed: why did it fail?
+                    } finally {
+                        try { r.close(); } catch (Exception ignored) { }   // NPE if open failed
+                    }
+                }
+              </script>
+            </div>
+            <div><div class="cmp-label c-green">✓ Prefer</div>
+              <script type="text/plain" data-code="java" data-file="GoodErrors.java">
+                String loadFirstLine(Path path) throws IOException {
+                    try (BufferedReader reader = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
+                        String line = reader.readLine();
+                        if (line == null) {
+                            throw new IOException("Empty file: " + path);
+                        }
+                        return line;
+                    }
+                }
+              </script>
+            </div>
+          </div>
+          <script type="text/plain" data-code="java" data-file="FailFast.java" data-run>
+            import java.util.Objects;
+
+            public class FailFast {
+                static final class Account {
+                    private long balanceCents;
+                    private boolean closed;
+
+                    void withdraw(long cents) {
+                        if (cents <= 0) {
+                            throw new IllegalArgumentException("cents must be > 0, was " + cents);   // bad argument
+                        }
+                        if (closed) {
+                            throw new IllegalStateException("account is closed");                  // wrong time
+                        }
+                        balanceCents -= cents;
+                    }
+
+                    void close() { closed = true; }
+                }
+
+                static String greet(String name) {
+                    return "Hello, " + Objects.requireNonNull(name, "name") + "!";              // null at the boundary
+                }
+
+                public static void main(String[] args) {
+                    Account account = new Account();
+                    for (Runnable call : new Runnable[] {
+                            () -> account.withdraw(-5),
+                            () -> { account.close(); account.withdraw(10); },
+                            () -> greet(null)}) {
+                        try {
+                            call.run();
+                        } catch (RuntimeException e) {
+                            System.out.println(e.getClass().getSimpleName() + ": " + e.getMessage());
+                        }
+                    }
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            IllegalArgumentException: cents must be > 0, was -5
+            IllegalStateException: account is closed
+            NullPointerException: name
+          </script>
+        </section>
+
+        <section class="doc-section" id="collections" data-title="Collections & streams">
+          <div class="sec-head"><h2><span class="sec-num">B.9</span>Collections, strings and streams</h2></div>
+          <ul class="checklist">
+            <li><b>Declare with interfaces</b>: <code>List&lt;Expense&gt; items = new ArrayList&lt;&gt;();</code></li>
+            <li><b>Return immutable collections or defensive copies</b> from your classes.</li>
+            <li><b>Don't modify a collection while iterating it</b> — use <code>removeIf</code> or an <code>Iterator</code>.</li>
+            <li><b>Use <code>StringBuilder</code> (or <code>String.join</code>/<code>Collectors.joining</code>) when building strings in loops.</b></li>
+            <li><b>Streams without side effects</b>; collect results instead of adding to outside lists. Prefer a loop when it's clearer.</li>
+            <li><b>Use the modern Map API</b>: <code>getOrDefault</code>, <code>merge</code>, <code>computeIfAbsent</code>.</li>
+          </ul>
+          <div class="compare">
+            <div><div class="cmp-label c-red">✗ Avoid</div>
+              <script type="text/plain" data-code="java" data-file="Counting.java">
+                Map<String, Integer> counts = new HashMap<>();
+                List<String> longWords = new ArrayList<>();
+                words.stream().forEach(w -> {
+                    if (counts.containsKey(w)) counts.put(w, counts.get(w) + 1);
+                    else counts.put(w, 1);
+                    if (w.length() > 5) longWords.add(w);   // side effect in a stream
+                });
+                String csv = "";
+                for (String w : longWords) csv += w + ",";  // quadratic, trailing comma
+              </script>
+            </div>
+            <div><div class="cmp-label c-green">✓ Prefer</div>
+              <script type="text/plain" data-code="java" data-file="Counting.java">
+                Map<String, Integer> counts = new HashMap<>();
+                for (String word : words) {
+                    counts.merge(word, 1, Integer::sum);
+                }
+                String csv = words.stream()
+                        .filter(word -> word.length() > 5)
+                        .collect(Collectors.joining(","));
+              </script>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="concurrency" data-title="Concurrency">
+          <div class="sec-head"><h2><span class="sec-num">B.10</span>Concurrency</h2></div>
+          <ul class="checklist">
+            <li><b>Share immutable objects</b>; when you must share mutable state, guard <em>every</em> access with the same lock or use atomics/concurrent collections.</li>
+            <li><b>Use executors, not <code>new Thread()</code></b> — and always shut them down.</li>
+            <li><b>Keep <code>synchronized</code> blocks tiny</b> and never call unknown code (callbacks, I/O) while holding a lock.</li>
+            <li><b>Never use <code>Thread.sleep</code> to “wait until it's ready”</b> — use <code>join</code>, <code>Future</code>, <code>CountDownLatch</code> or callbacks.</li>
+            <li><b>Don't swallow <code>InterruptedException</code></b>: restore the flag with <code>Thread.currentThread().interrupt()</code>.</li>
+          </ul>
+          <div class="compare">
+            <div><div class="cmp-label c-red">✗ Avoid</div>
+              <script type="text/plain" data-code="java" data-file="Racy.java">
+                static int downloads;                     // shared, unguarded
+                for (String url : urls) {
+                    new Thread(() -> {                    // unbounded threads, never joined
+                        fetch(url);
+                        downloads++;                      // data race
+                    }).start();
+                }
+                Thread.sleep(2000);                       // "should be enough"
+                System.out.println(downloads);
+              </script>
+            </div>
+            <div><div class="cmp-label c-green">✓ Prefer</div>
+              <script type="text/plain" data-code="java" data-file="Safe.java">
+                AtomicInteger downloads = new AtomicInteger();
+                ExecutorService pool = Executors.newFixedThreadPool(4);
+                try {
+                    List<Callable<Void>> tasks = urls.stream()
+                            .map(url -> (Callable<Void>) () -> { fetch(url); downloads.incrementAndGet(); return null; })
+                            .toList();
+                    pool.invokeAll(tasks);                // waits for all of them
+                } finally {
+                    pool.shutdown();
+                }
+                System.out.println(downloads.get());
+              </script>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="comments" data-title="Comments & Javadoc">
+          <div class="sec-head"><h2><span class="sec-num">B.11</span>Comments and Javadoc</h2></div>
+          <ul class="checklist">
+            <li><b>Explain <em>why</em>, not <em>what</em></b> — the code already says what.</li>
+            <li><b>Javadoc every public API</b>: purpose, parameters, return value, exceptions, edge cases.</li>
+            <li><b>Delete commented-out code</b>; git remembers it.</li>
+            <li><b>Turn comments into names</b> when you can (extract a well-named method or variable).</li>
+            <li><b>TODOs need context</b>: <code>// TODO(ada): remove after API v2 ships (#123)</code>.</li>
+          </ul>
+          <div class="compare">
+            <div><div class="cmp-label c-red">✗ Avoid</div>
+              <script type="text/plain" data-code="java" data-file="Comments.java">
+                // increment i
+                i++;
+
+                // check if user is adult and active and not banned
+                if (u.age >= 18 && u.active && !u.banned) { … }
+
+                // old version:
+                // total = total * 1.1;
+              </script>
+            </div>
+            <div><div class="cmp-label c-green">✓ Prefer</div>
+              <script type="text/plain" data-code="java" data-file="Comments.java">
+                if (user.canPurchase()) { … }
+
+                /**
+                 * Rounds half-even because banks do, so totals match statements.
+                 *
+                 * @param cents amount in hundredths; must be ≥ 0
+                 * @return the converted amount, never negative
+                 * @throws IllegalArgumentException if {@code rate} is not positive
+                 */
+                public static long convert(long cents, double rate) { … }
+              </script>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="android" data-title="Android rules">
+          <div class="sec-head"><h2><span class="sec-num">B.12</span>Android-specific rules</h2></div>
+          <div class="table-wrap">
+            <table class="t">
+              <thead><tr><th>Rule</th><th>✗ Avoid</th><th>✓ Prefer</th></tr></thead>
+              <tbody>
+                <tr><td>Main thread stays free</td><td>database/network calls in <code>onCreate</code></td><td>background executor or WorkManager; results via <code>LiveData.postValue</code></td></tr>
+                <tr><td>No leaked screens</td><td><code>static Activity current;</code>, Context in a ViewModel</td><td>application context for long-lived objects; ViewModel holds data only</td></tr>
+                <tr><td>Resources, not literals</td><td><code>setText("Saved!")</code>, <code>#FF0000</code> in layouts</td><td><code>getString(R.string.saved)</code>, <code>?attr/colorError</code></td></tr>
+                <tr><td>Type-safe views</td><td><code>(TextView) findViewById(R.id.x)</code> everywhere</td><td>View Binding</td></tr>
+                <tr><td>API level awareness</td><td><code>s.strip()</code>, <code>List.of()</code> with minSdk 26</td><td><code>trim()</code>, <code>Arrays.asList</code>, or desugaring — and run Lint</td></tr>
+                <tr><td>State survives rotation</td><td>screen data in Activity fields</td><td>ViewModel + <code>SavedStateHandle</code></td></tr>
+                <tr><td>Logic is testable</td><td>business rules inside Activities</td><td>plain-Java domain classes with unit tests</td></tr>
+                <tr><td>Secrets stay secret</td><td>API keys and keystore passwords in git</td><td><code>local.properties</code>/<code>keystore.properties</code> (git-ignored), CI secrets</td></tr>
+                <tr><td>Respect the user</td><td>asking every permission at launch</td><td>ask in context, handle “deny” gracefully</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="doc-section" id="refactor" data-title="Worked example: a full refactor">
+          <div class="sec-head"><h2><span class="sec-num">B.13</span>Worked example: refactoring step by step</h2></div>
+          <p>Here is code a beginner might write for a monthly expense report. It works — and breaks almost every rule above. Run it, then compare with the refactored version: <b>the output is identical</b>, but the code is readable, testable and safe.</p>
+          <script type="text/plain" data-code="java" data-file="Before — Report.java" data-run>
+            import java.util.*;
+
+            public class Report {
+                static ArrayList l = new ArrayList();             // raw type, cryptic name, global state
+
+                public static void main(String[] args) {
+                    l.add("Coffee;3.5;F"); l.add("Bus;2.8;T"); l.add("Lunch;9.95;F"); l.add("bad line"); l.add("Cinema;12;X");
+                    double t = 0; String s = "";
+                    HashMap m = new HashMap();
+                    for (int i = 0; i < l.size(); i++) {
+                        String[] p = ((String) l.get(i)).split(";");
+                        if (p.length == 3) {
+                            double a = Double.parseDouble(p[1]);
+                            t = t + a;                                 // money in a double
+                            String c = p[2].equals("F") ? "Food" : p[2].equals("T") ? "Transport" : "Other";
+                            if (m.get(c) == null) m.put(c, a); else m.put(c, (Double) m.get(c) + a);
+                            s = s + p[0] + ", ";                       // string concat in a loop
+                        }
+                    }
+                    System.out.println("Items: " + s.substring(0, s.length() - 2));
+                    System.out.println("Total: " + String.format("%.2f", t));
+                    for (Object k : new TreeMap(m).keySet()) System.out.println("  " + k + ": " + String.format("%.2f", m.get(k)));
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            Items: Coffee, Bus, Lunch, Cinema
+            Total: 28.25
+              Food: 13.45
+              Other: 12.00
+              Transport: 2.80
+          </script>
+          <p><b>What's wrong:</b> raw types and casts · single-letter names · magic codes (<code>"F"</code>, <code>"T"</code>) · money as <code>double</code> · bad lines silently ignored · string concatenation in a loop · parsing, calculation and printing tangled in <code>main</code> · mutable static state · wildcard import.</p>
+          <script type="text/plain" data-code="java" data-file="After — ExpenseReport.java" data-run>
+            import java.math.BigDecimal;
+            import java.util.ArrayList;
+            import java.util.EnumMap;
+            import java.util.List;
+            import java.util.Map;
+            import java.util.Optional;
+            import java.util.stream.Collectors;
+
+            public class ExpenseReport {
+
+                enum Category {
+                    FOOD("F"), TRANSPORT("T"), OTHER("");
+
+                    private final String code;
+
+                    Category(String code) {
+                        this.code = code;
+                    }
+
+                    static Category fromCode(String code) {
+                        for (Category c : values()) {
+                            if (c.code.equals(code)) {
+                                return c;
+                            }
+                        }
+                        return OTHER;
+                    }
+
+                    String label() {
+                        return name().charAt(0) + name().substring(1).toLowerCase();
+                    }
+                }
+
+                record Expense(String title, long cents, Category category) { }
+
+                record Summary(List<String> titles, long totalCents, Map<Category, Long> byCategory) { }
+
+                /** Parses "title;amount;code"; returns empty for malformed lines. */
+                static Optional<Expense> parse(String line) {
+                    String[] fields = line.split(";");
+                    if (fields.length != 3) {
+                        return Optional.empty();
+                    }
+                    long cents = new BigDecimal(fields[1].trim()).movePointRight(2).longValueExact();
+                    return Optional.of(new Expense(fields[0].trim(), cents, Category.fromCode(fields[2].trim())));
+                }
+
+                static Summary summarize(List<Expense> expenses) {
+                    Map<Category, Long> byCategory = new EnumMap<>(Category.class);
+                    long total = 0;
+                    List<String> titles = new ArrayList<>();
+                    for (Expense e : expenses) {
+                        byCategory.merge(e.category(), e.cents(), Long::sum);
+                        total += e.cents();
+                        titles.add(e.title());
+                    }
+                    return new Summary(titles, total, byCategory);
+                }
+
+                static String format(long cents) {
+                    return BigDecimal.valueOf(cents, 2).toPlainString();
+                }
+
+                public static void main(String[] args) {
+                    List<String> lines = List.of("Coffee;3.5;F", "Bus;2.8;T", "Lunch;9.95;F", "bad line", "Cinema;12;X");
+
+                    List<Expense> expenses = new ArrayList<>();
+                    for (String line : lines) {
+                        parse(line).ifPresentOrElse(expenses::add,
+                                () -> System.err.println("Skipped malformed line: " + line));   // reported, not hidden
+                    }
+                    Summary summary = summarize(expenses);
+
+                    System.out.println("Items: " + String.join(", ", summary.titles()));
+                    System.out.println("Total: " + format(summary.totalCents()));
+                    summary.byCategory().entrySet().stream()
+                            .sorted(Map.Entry.comparingByKey((a, b) -> a.label().compareTo(b.label())))
+                            .forEach(entry -> System.out.println("  " + entry.getKey().label() + ": " + format(entry.getValue())));
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            Items: Coffee, Bus, Lunch, Cinema
+            Total: 28.25
+              Food: 13.45
+              Other: 12.00
+              Transport: 2.80
+          </script>
+          <p class="small muted">The skipped line goes to standard error, so it appears in Android Studio's Run window in red but not in the report. Each piece — <code>parse</code>, <code>summarize</code>, <code>format</code> — can now be unit-tested on its own (lesson 17).</p>
+        </section>
+
+        <section class="doc-section" id="tooling" data-title="Tools that enforce the rules">
+          <div class="sec-head"><h2><span class="sec-num">B.14</span>Let tools enforce the rules</h2></div>
+          <div class="table-wrap">
+            <table class="t">
+              <thead><tr><th>Tool</th><th>Catches</th><th>How</th></tr></thead>
+              <tbody>
+                <tr><td>Android Studio inspections</td><td>unused code, null risks, simplifications, many bugs</td><td>yellow/red highlights; <b>Code → Inspect Code…</b> for the whole project</td></tr>
+                <tr><td>Reformat &amp; optimize imports on save</td><td>formatting, wildcard/unused imports</td><td>Settings → Tools → Actions on Save</td></tr>
+                <tr><td>Android Lint</td><td>API levels, leaks, accessibility, hard-coded text, security</td><td><code>./gradlew lintDebug</code> — in CI</td></tr>
+                <tr><td>Checkstyle</td><td>style-guide violations (naming, line length, braces)</td><td>Gradle <code>checkstyle</code> plugin with the Google config</td></tr>
+                <tr><td>SpotBugs / Error Prone</td><td>bug patterns (equals without hashCode, ignored return values, …)</td><td>Gradle plugins; fail the build on errors</td></tr>
+                <tr><td>Unit tests + coverage</td><td>broken behaviour</td><td>lesson 17; run on every push</td></tr>
+                <tr><td>Code review</td><td>design, naming, clarity — what tools can't judge</td><td>small pull requests + the checklist below</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <h3>The code-review checklist</h3>
+          <ul class="checklist">
+            <li>Does every name say what it is or does?</li>
+            <li>Is each method short and doing one thing? Any flag parameters or long parameter lists?</li>
+            <li>Are fields private and final where possible? Could this be a record?</li>
+            <li>Any <code>==</code> on objects, money in <code>double</code>, magic numbers?</li>
+            <li>Can anything be null that isn't handled? Any returned null collections?</li>
+            <li>Are exceptions specific, logged, never swallowed? Are resources closed?</li>
+            <li>Is shared state thread-safe? Is anything slow running on the Android main thread?</li>
+            <li>Are there tests for the new behaviour, and do they pass in CI?</li>
+          </ul>
+        </section>
+
+        <section class="doc-section" id="exercises" data-title="Exercises">
+          <div class="sec-head"><h2><span class="sec-num">B.15</span>Exercises</h2></div>
+          <details class="exercise">
+            <summary>Exercise 1 — Name it <span class="badge green">Easy</span></summary>
+            <div class="ex-body">
+              <p>Rename everything so the comments become unnecessary:</p>
+              <script type="text/plain" data-code="java" data-file="Task">
+                int d;            // elapsed time in days
+                boolean f;        // true if the user accepted the terms
+                List<String> l;   // email addresses of subscribers
+                void proc(Order o) { … }   // sends the receipt for an order
+              </script>
+              <script type="text/plain" data-code="java" data-file="Solution">
+                int elapsedDays;
+                boolean hasAcceptedTerms;
+                List<String> subscriberEmails;
+                void sendReceipt(Order order) { … }
+              </script>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 2 — Flatten the arrow <span class="badge blue">Medium</span></summary>
+            <div class="ex-body">
+              <p>Rewrite with guard clauses and a named constant; keep the behaviour identical.</p>
+              <script type="text/plain" data-code="java" data-file="Task">
+                static String grade(Integer score) {
+                    String r = "";
+                    if (score != null) {
+                        if (score >= 0 && score <= 100) {
+                            if (score >= 50) { r = "PASS"; } else { r = "FAIL"; }
+                        } else { r = "INVALID"; }
+                    } else { r = "MISSING"; }
+                    return r;
+                }
+              </script>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run>
+                public class Grade {
+                    static final int PASS_MARK = 50;
+
+                    static String grade(Integer score) {
+                        if (score == null) {
+                            return "MISSING";
+                        }
+                        if (score < 0 || score > 100) {
+                            return "INVALID";
+                        }
+                        return score >= PASS_MARK ? "PASS" : "FAIL";
+                    }
+
+                    public static void main(String[] args) {
+                        for (Integer s : new Integer[] {null, -1, 49, 50, 101}) {
+                            System.out.println(s + " → " + grade(s));
+                        }
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output>
+                null → MISSING
+                -1 → INVALID
+                49 → FAIL
+                50 → PASS
+                101 → INVALID
+              </script>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 3 — Review a pull request <span class="badge amber">Challenge</span></summary>
+            <div class="ex-body">
+              <p>Find at least eight problems in this Android-ish class using the checklist, then sketch the fixed version.</p>
+              <script type="text/plain" data-code="java" data-file="Task">
+                public class userManager {
+                    public static Context ctx;
+                    public ArrayList<User> users = new ArrayList();
+                    public User getUser(String Name) {
+                        for (User u : users) if (u.name == Name) return u;
+                        return null;
+                    }
+                    public void save(boolean b) {
+                        try {
+                            FileWriter w = new FileWriter(ctx.getFilesDir() + "/users.txt");
+                            for (User u : users) w.write(u.name + "," + u.balance + "\n");
+                        } catch (Exception e) { }
+                    }
+                }
+              </script>
+              <p class="small muted">Class name not UpperCamelCase · static Context (leak) · public mutable list, declared as <code>ArrayList</code>, raw <code>new ArrayList()</code> · parameter <code>Name</code> capitalised · <code>==</code> on strings · returns null instead of <code>Optional</code> · unexplained boolean flag <code>b</code> · writer never closed (no try-with-resources) · default charset · exception swallowed · I/O likely on the main thread · balance probably a <code>double</code> · missing braces on the <code>for</code>/<code>if</code>.</p>
+            </div>
+          </details>
+        </section>
+
+        <section class="doc-section" id="quiz" data-title="Quiz">
+          <div class="sec-head"><h2><span class="sec-num">B.16</span>Quiz</h2></div>
+          <script type="application/json" data-quiz>
+          [
+            {"q": "Which is the best name for a boolean that tells whether a list has entries?", "options": ["`listFlag`", "`hasItems`", "`items`", "`checkItems`"], "answer": 1, "explain": "Booleans should read as a question: is…, has…, can…"},
+            {"q": "A method should return 'no results'. What should it return?", "options": ["`null`", "An empty collection", "`-1`", "Throw an exception"], "answer": 1, "explain": "Empty collections let callers loop without null checks; null forces every caller to remember a check."},
+            {"q": "Why prefer `Integer.compare(a, b)` over `a - b` in a comparator?", "options": ["It's shorter", "Subtraction can overflow and give the wrong sign", "It sorts descending", "It works with null"], "answer": 1, "explain": "`Integer.MAX_VALUE - (-1)` overflows to a negative number, so the order flips."},
+            {"q": "What's wrong with `catch (Exception e) { }`?", "options": ["Nothing", "It swallows every failure, hiding bugs and data loss", "It doesn't compile", "It's slow"], "answer": 1, "explain": "Catch specific exceptions where you can handle them, and at minimum log with the exception object."},
+            {"q": "Which comment adds the most value?", "options": ["`// loop over items`", "`// i++`", "`// Banks round half-even, so we do too to match statements`", "`// TODO`"], "answer": 2, "explain": "Good comments explain why — intent, constraints, trade-offs — not what the code already says."}
+          ]
+          </script>
+        </section>
+
+        <section class="doc-section" id="references" data-title="Further reading">
+          <div class="sec-head"><h2><span class="sec-num">B.17</span>Further reading</h2></div>
+          <ul>
+            <li><a href="https://google.github.io/styleguide/javaguide.html" target="_blank" rel="noopener">Google Java Style Guide</a></li>
+            <li><a href="https://source.android.com/docs/setup/contribute/code-style" target="_blank" rel="noopener">Android (AOSP) Java code style</a></li>
+            <li><a href="https://developer.android.com/studio/write/lint" target="_blank" rel="noopener">Improve your code with lint checks</a></li>
+            <li>Joshua Bloch, <em>Effective Java</em> (3rd ed.) · Robert C. Martin, <em>Clean Code</em> · Martin Fowler, <em>Refactoring</em></li>
+          </ul>
+        </section>
+
+        <div id="pager"></div>
+      </div>
+    </main>
+  </div>
+  <div id="site-footer"></div>
+  <script src="assets/js/core.js?v=__BUILD__"></script>
+</body>
+</html>

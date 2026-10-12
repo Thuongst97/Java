@@ -13,7 +13,7 @@ A free, hands-on website that takes you from **installing Android Studio** to **
 | ⚡ Advanced | 15 Concurrency · 16 Testing, reflection, JVM & design patterns · 17 **Unit tests: setup & run in Android Studio** |
 | 🤖 Android with Java | 18 App fundamentals · 19 Views & layouts · 20 ViewModel, LiveData & repositories · 21 Room, networking & WorkManager · 22 Testing, debugging & publishing |
 | 🏁 Final project | 23 **Spendly** — a complete expense-tracker app built in 9 milestones |
-| 📋 Reference | Cheat sheet & mastery checklist |
+| 📋 Reference | A · Cheat sheet & mastery checklist · B · **Java coding rules & best practices** (✗/✓ examples, full refactoring walkthrough) |
 
 Every lesson has examples, exercises with solutions, a quiz, and progress tracking saved in your browser. Runnable examples (▶ **Run**) can be edited and executed in the browser through the free [Compiler Explorer](https://godbolt.org) API; if it's unreachable the page copies the code so you can run it in Android Studio.
 
