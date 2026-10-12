@@ -1,0 +1,458 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Variables, Types &amp; Operators — Java Academy</title>
+  <meta name="description" content="Java variables, the eight primitive types, var, references and boxing, casting and overflow, operators and the Math class.">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="assets/css/main.css?v=__BUILD__">
+  <script>try{var t=localStorage.getItem("ja-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body data-page="basics">
+  <div id="site-header"></div>
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+      <div class="content-inner">
+
+        <header class="page-hero">
+          <nav class="crumbs"><a href="index.html">Home</a><span>/</span><span>Java Fundamentals</span><span>/</span><span>Lesson 03</span></nav>
+          <div class="eyebrow">Lesson 03 · Java Fundamentals</div>
+          <h1>Variables, Types &amp; Operators</h1>
+          <p class="lead">Programs remember things in variables, and in Java every variable has a type that the compiler checks. Learn the eight primitive types, how references differ, how to convert between types safely and how Java's operators behave — including the traps.</p>
+          <div class="page-meta"><span>⏱ 50 min</span><span>🎯 Beginner</span><span>🧩 Prerequisite: lesson 02</span></div>
+          <div class="objectives">
+            <h4>You will be able to</h4>
+            <ul>
+              <li>Declare variables and constants with <code>final</code></li>
+              <li>Pick the right primitive type</li>
+              <li>Use <code>var</code> where it helps readability</li>
+              <li>Explain primitives vs references and boxing</li>
+              <li>Convert and cast without losing data by accident</li>
+              <li>Predict the result of any operator expression</li>
+            </ul>
+          </div>
+        </header>
+
+        <section class="doc-section" id="variables" data-title="Variables & constants">
+          <div class="sec-head"><h2><span class="sec-num">3.1</span>Variables &amp; constants</h2></div>
+          <p>A <b>variable</b> is a named box that holds a value of a fixed <b>type</b>. Declare it with <code>type name = value;</code>. Add <code>final</code> to make it a constant: it can be assigned only once.</p>
+          <script type="text/plain" data-code="java" data-file="Variables.java" data-run>
+            public class Variables {
+                public static void main(String[] args) {
+                    int score = 10;              // declare + initialise
+                    score = score + 5;           // reassign
+                    score += 5;                  // shorthand for score = score + 5
+
+                    final double VAT_RATE = 0.2; // a constant
+                    // VAT_RATE = 0.25;          // ✗ error: cannot assign a value to final variable
+
+                    String player;               // declared, not yet assigned
+                    player = "Ada";              // Java forbids reading it before this line
+
+                    System.out.println(player + " scored " + score);
+                    System.out.println("VAT: " + VAT_RATE * 100 + "%");
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            Ada scored 20
+            VAT: 20.0%
+          </script>
+          <h3>Naming conventions</h3>
+          <div class="table-wrap">
+            <table class="t">
+              <thead><tr><th>Kind</th><th>Style</th><th>Examples</th></tr></thead>
+              <tbody>
+                <tr><td>Variables, methods</td><td>lowerCamelCase</td><td><code>itemCount</code>, <code>isVisible</code>, <code>calculateTotal()</code></td></tr>
+                <tr><td>Classes, interfaces, records, enums</td><td>UpperCamelCase</td><td><code>ShoppingCart</code>, <code>Comparable</code></td></tr>
+                <tr><td>Constants (<code>static final</code>)</td><td>UPPER_SNAKE_CASE</td><td><code>MAX_RETRIES</code>, <code>VAT_RATE</code></td></tr>
+                <tr><td>Packages</td><td>lowercase, reversed domain</td><td><code>com.example.spendly.data</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="small muted">Names may contain letters, digits, <code>_</code> and <code>$</code>, may not start with a digit, and may not be a keyword such as <code>class</code> or <code>int</code>.</p>
+        </section>
+
+        <section class="doc-section" id="primitives" data-title="Primitive types">
+          <div class="sec-head"><h2><span class="sec-num">3.2</span>The eight primitive types</h2></div>
+          <p>Primitive values are stored directly in the variable — fast and compact. Their sizes are identical on every platform (unlike C).</p>
+          <div class="table-wrap">
+            <table class="t">
+              <thead><tr><th>Type</th><th>Size</th><th>Range / values</th><th>Use for</th><th>Literal</th></tr></thead>
+              <tbody>
+                <tr><td><code>byte</code></td><td>8 bit</td><td>−128 … 127</td><td>raw binary data</td><td><code>(byte) 7</code></td></tr>
+                <tr><td><code>short</code></td><td>16 bit</td><td>−32 768 … 32 767</td><td>rarely used</td><td><code>(short) 7</code></td></tr>
+                <tr><td><code>int</code></td><td>32 bit</td><td>about ±2.1 billion</td><td><b>default whole number</b></td><td><code>42</code>, <code>1_000_000</code></td></tr>
+                <tr><td><code>long</code></td><td>64 bit</td><td>about ±9.2 × 10<sup>18</sup></td><td>timestamps, big counts, money in cents</td><td><code>42L</code></td></tr>
+                <tr><td><code>float</code></td><td>32 bit</td><td>~7 decimal digits</td><td>graphics (Android canvas)</td><td><code>3.14f</code></td></tr>
+                <tr><td><code>double</code></td><td>64 bit</td><td>~15 decimal digits</td><td><b>default decimal number</b></td><td><code>3.14</code>, <code>2e-3</code></td></tr>
+                <tr><td><code>char</code></td><td>16 bit</td><td>one UTF-16 code unit</td><td>a single character</td><td><code>'A'</code>, <code>'\n'</code></td></tr>
+                <tr><td><code>boolean</code></td><td>—</td><td><code>true</code> / <code>false</code></td><td>conditions, flags</td><td><code>true</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <script type="text/plain" data-code="java" data-file="Primitives.java" data-run>
+            public class Primitives {
+                public static void main(String[] args) {
+                    int population = 8_100_000;          // underscores improve readability
+                    long worldPopulation = 8_100_000_000L; // too big for int → needs L
+                    double price = 19.99;
+                    float ratio = 0.75f;                 // f suffix: a double literal won't fit
+                    char grade = 'A';                    // single quotes for char
+                    boolean isOpen = true;
+                    int hex = 0xFF, binary = 0b1010;     // two variables on one line
+
+                    System.out.println(population + " " + worldPopulation);
+                    System.out.println(price + " " + ratio + " " + grade + " " + isOpen);
+                    System.out.println(hex + " " + binary);
+                    System.out.println("int max: " + Integer.MAX_VALUE);
+                    System.out.println("long max: " + Long.MAX_VALUE);
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            8100000 8100000000
+            19.99 0.75 A true
+            255 10
+            int max: 2147483647
+            long max: 9223372036854775807
+          </script>
+        </section>
+
+        <section class="doc-section" id="var" data-title="Type inference with var">
+          <div class="sec-head"><h2><span class="sec-num">3.3</span>Local type inference with <code>var</code></h2></div>
+          <p>Since Java 10 you can write <code>var</code> for <b>local</b> variables and let the compiler infer the type from the initialiser. The variable is still statically typed — <code>var</code> is not “any type”.</p>
+          <script type="text/plain" data-code="java" data-file="VarDemo.java">
+            var count = 10;                       // int
+            var name = "Ada";                     // String
+            var prices = new java.util.ArrayList<Double>(); // ArrayList<Double> — avoids repeating a long type
+
+            count = "ten";                        // ✗ error: incompatible types: String cannot be converted to int
+            var nothing;                          // ✗ error: cannot infer type (no initialiser)
+            var empty = null;                     // ✗ error: variable initializer is 'null'
+          </script>
+          <div class="callout tip">
+            <div class="ci">💡</div>
+            <div><span class="ct">When to use var</span>
+              <p>Use it when the type is obvious from the right-hand side (<code>var list = new ArrayList&lt;String&gt;()</code>) or very long. Prefer an explicit type when it documents intent (<code>long total = sum(items)</code>). Fields, parameters and return types always need explicit types.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="references" data-title="Primitives vs references">
+          <div class="sec-head"><h2><span class="sec-num">3.4</span>Primitives vs references, and boxing</h2></div>
+          <p>Every type that is not one of the eight primitives is a <b>reference type</b>: <code>String</code>, arrays, and every class you write. A reference variable doesn't hold the object itself — it holds an <em>arrow</em> (address) pointing to an object on the <b>heap</b>, or the special value <code>null</code> meaning “points to nothing”.</p>
+          <figure class="diagram">
+            <svg viewBox="0 0 640 170" width="640" role="img" aria-label="Primitive variables hold values, reference variables point to heap objects">
+              <defs><marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#f89820"/></marker></defs>
+              <g font-family="JetBrains Mono, monospace" font-size="13">
+                <text x="20" y="22" fill="#9a98a8" font-family="Inter, sans-serif" font-weight="700">STACK (variables)</text>
+                <text x="380" y="22" fill="#9a98a8" font-family="Inter, sans-serif" font-weight="700">HEAP (objects)</text>
+                <rect x="20" y="36" width="230" height="34" rx="6" fill="rgba(108,184,255,.12)" stroke="#6cb8ff"/><text x="32" y="58" fill="currentColor">int age</text><text x="200" y="58" fill="currentColor">36</text>
+                <rect x="20" y="80" width="230" height="34" rx="6" fill="rgba(248,152,32,.12)" stroke="#f89820"/><text x="32" y="102" fill="currentColor">String name</text><circle cx="210" cy="97" r="5" fill="#f89820"/>
+                <rect x="20" y="124" width="230" height="34" rx="6" fill="rgba(248,152,32,.12)" stroke="#f89820"/><text x="32" y="146" fill="currentColor">String other</text><text x="196" y="146" fill="#9a98a8">null</text>
+                <rect x="380" y="74" width="230" height="46" rx="8" fill="rgba(61,220,132,.12)" stroke="#3ddc84"/><text x="396" y="102" fill="currentColor">String "Ada"</text>
+                <path d="M215 97H376" stroke="#f89820" stroke-width="2" marker-end="url(#ar3)"/>
+              </g>
+            </svg>
+            <figcaption>A primitive variable holds its value. A reference variable holds an arrow to an object — or null.</figcaption>
+          </figure>
+          <p>Each primitive has a <b>wrapper class</b> (<code>Integer</code>, <code>Long</code>, <code>Double</code>, <code>Character</code>, <code>Boolean</code>…) so it can be used where an object is required, such as in collections. Java converts automatically: <b>autoboxing</b> (<code>int → Integer</code>) and <b>unboxing</b> (<code>Integer → int</code>).</p>
+          <script type="text/plain" data-code="java" data-file="Boxing.java" data-run>
+            public class Boxing {
+                public static void main(String[] args) {
+                    Integer boxed = 42;          // autoboxing: Integer.valueOf(42)
+                    int plain = boxed + 1;       // unboxing, then arithmetic
+                    System.out.println(plain);
+
+                    Integer a = 127, b = 127;
+                    Integer c = 1000, d = 1000;
+                    System.out.println(a == b);       // true  — small values are cached
+                    System.out.println(c == d);       // false — == compares references!
+                    System.out.println(c.equals(d));  // true  — compares values
+
+                    Integer missing = null;
+                    try {
+                        int boom = missing;      // unboxing null → NullPointerException
+                    } catch (NullPointerException e) {
+                        System.out.println("NPE while unboxing null");
+                    }
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            43
+            true
+            false
+            true
+            NPE while unboxing null
+          </script>
+          <div class="callout danger">
+            <div class="ci">🚨</div>
+            <div><span class="ct">Rule: compare objects with equals(), not ==</span>
+              <p><code>==</code> on references asks “are these the <em>same object</em>?”. For values — <code>Integer</code>, <code>String</code>, anything — use <code>.equals()</code>. This bug hides in tests (small numbers are cached) and appears in production.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="conversions" data-title="Conversions & casting">
+          <div class="sec-head"><h2><span class="sec-num">3.5</span>Conversions, casting &amp; overflow</h2></div>
+          <p><b>Widening</b> conversions (to a bigger type) happen automatically: <code>int → long → double</code>. <b>Narrowing</b> conversions may lose information, so you must ask for them explicitly with a <b>cast</b> <code>(type)</code>.</p>
+          <script type="text/plain" data-code="java" data-file="Casting.java" data-run>
+            public class Casting {
+                public static void main(String[] args) {
+                    int i = 7;
+                    double d = i;                    // widening: automatic
+                    System.out.println(d);
+
+                    double price = 9.99;
+                    int whole = (int) price;         // narrowing: truncates toward zero
+                    System.out.println(whole);
+                    System.out.println(Math.round(price)); // rounds: 10 (a long)
+
+                    System.out.println(7 / 2);       // int / int → int: 3
+                    System.out.println(7 / 2.0);     // one double → double: 3.5
+                    System.out.println((double) 7 / 2);
+
+                    int big = Integer.MAX_VALUE;
+                    System.out.println(big + 1);     // silent overflow wraps around!
+                    System.out.println((long) big + 1);
+
+                    char c = 'A';
+                    System.out.println(c + 1);       // char is a number: 66
+                    System.out.println((char) (c + 1));
+
+                    int parsed = Integer.parseInt("123");      // String → int
+                    String text = String.valueOf(parsed * 2);  // int → String
+                    System.out.println(text + "!");
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            7.0
+            9
+            10
+            3
+            3.5
+            3.5
+            -2147483648
+            2147483648
+            66
+            B
+            246!
+          </script>
+          <div class="callout warn">
+            <div class="ci">⚠️</div>
+            <div><span class="ct">Overflow is silent</span>
+              <p>Integer arithmetic wraps around without any error. If overflow would be a bug (money, sizes), use <code>long</code> or the exact methods <code>Math.addExact</code>, <code>Math.multiplyExact</code>, which throw <code>ArithmeticException</code> instead of returning garbage.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="operators" data-title="Operators">
+          <div class="sec-head"><h2><span class="sec-num">3.6</span>Operators</h2></div>
+          <div class="table-wrap">
+            <table class="t">
+              <thead><tr><th>Category</th><th>Operators</th><th>Notes</th></tr></thead>
+              <tbody>
+                <tr><td>Arithmetic</td><td><code>+ - * / %</code></td><td><code>%</code> is the remainder: <code>7 % 3 == 1</code>; sign follows the left operand</td></tr>
+                <tr><td>Increment</td><td><code>++ --</code></td><td><code>i++</code> returns the old value, <code>++i</code> the new one</td></tr>
+                <tr><td>Assignment</td><td><code>= += -= *= /= %=</code></td><td>compound forms include an implicit cast</td></tr>
+                <tr><td>Comparison</td><td><code>== != &lt; &lt;= &gt; &gt;=</code></td><td>produce a <code>boolean</code></td></tr>
+                <tr><td>Logical</td><td><code>&amp;&amp; || !</code></td><td><b>short-circuit</b>: the right side runs only if needed</td></tr>
+                <tr><td>Ternary</td><td><code>cond ? a : b</code></td><td>an expression that picks one of two values</td></tr>
+                <tr><td>Bitwise</td><td><code>&amp; | ^ ~ &lt;&lt; &gt;&gt; &gt;&gt;&gt;</code></td><td>flags, hashing, Android <code>View</code> flags</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <script type="text/plain" data-code="java" data-file="Operators.java" data-run>
+            public class Operators {
+                public static void main(String[] args) {
+                    int x = 5;
+                    int a = x++;        // a = 5, then x becomes 6
+                    int b = ++x;        // x becomes 7, then b = 7
+                    System.out.println(a + " " + b + " " + x);
+
+                    System.out.println(17 % 5);         // 2
+                    System.out.println(-17 % 5);        // -2
+                    System.out.println(2 + 3 * 4);      // 14 — * before +
+                    System.out.println((2 + 3) * 4);    // 20
+
+                    String name = null;
+                    // && stops early, so name.length() is never called on null:
+                    boolean ok = name != null && name.length() > 2;
+                    System.out.println(ok);
+
+                    int age = 20;
+                    String group = age >= 18 ? "adult" : "minor";
+                    System.out.println(group);
+
+                    int flags = 0b0101;
+                    System.out.println((flags & 0b0100) != 0); // is bit 2 set?
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            5 7 7
+            2
+            -2
+            14
+            20
+            false
+            adult
+            true
+          </script>
+        </section>
+
+        <section class="doc-section" id="math" data-title="Math & floating point">
+          <div class="sec-head"><h2><span class="sec-num">3.7</span>The <code>Math</code> class &amp; floating-point pitfalls</h2></div>
+          <script type="text/plain" data-code="java" data-file="MathDemo.java" data-run>
+            import java.math.BigDecimal;
+
+            public class MathDemo {
+                public static void main(String[] args) {
+                    System.out.println(Math.max(3, 9) + " " + Math.min(3, 9));
+                    System.out.println(Math.abs(-4.5));
+                    System.out.println(Math.pow(2, 10));      // 1024.0 — always double
+                    System.out.println(Math.sqrt(144));
+                    System.out.println(Math.floor(2.7) + " " + Math.ceil(2.1));
+                    System.out.println(Math.floorMod(-17, 5)); // 3 — always non-negative
+
+                    System.out.println(0.1 + 0.2);            // binary floating point!
+                    System.out.println(0.1 + 0.2 == 0.3);
+
+                    BigDecimal sum = new BigDecimal("0.1").add(new BigDecimal("0.2"));
+                    System.out.println(sum);                  // exact decimal arithmetic
+                    System.out.println(10.0 / 0 + " " + 0.0 / 0);
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            9 3
+            4.5
+            1024.0
+            12.0
+            2.0 3.0
+            3
+            0.30000000000000004
+            false
+            0.3
+            Infinity NaN
+          </script>
+          <div class="callout danger">
+            <div class="ci">💸</div>
+            <div><span class="ct">Never store money in a double</span>
+              <p><code>double</code> cannot represent 0.1 exactly. For money use <code>BigDecimal</code> (created from a <em>String</em>), or store whole <b>cents</b> in a <code>long</code> — which is exactly what the Spendly app in the final project does.</p>
+            </div>
+          </div>
+          <div class="callout note">
+            <div class="ci">🎲</div>
+            <div><span class="ct">Random numbers</span>
+              <p><code>Math.random()</code> returns a double in [0, 1). Prefer <code>java.util.random.RandomGenerator.getDefault().nextInt(1, 7)</code> (Java 17+) or <code>new java.util.Random().nextInt(6) + 1</code> for a die roll; on Android both work.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="exercises" data-title="Exercises">
+          <div class="sec-head"><h2><span class="sec-num">3.8</span>Exercises</h2></div>
+          <details class="exercise">
+            <summary>Exercise 1 — Temperature converter <span class="badge green">Easy</span></summary>
+            <div class="ex-body">
+              <p>Convert 36.6 °C to Fahrenheit (<code>F = C × 9 / 5 + 32</code>) and print it with one decimal place. Then make the formula use only <code>int</code> values for 37 °C — why is the result different from 98.6?</p>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run>
+                public class Temperature {
+                    public static void main(String[] args) {
+                        double celsius = 36.6;
+                        double fahrenheit = celsius * 9 / 5 + 32;
+                        System.out.printf("%.1f °C = %.1f °F%n", celsius, fahrenheit);
+
+                        int c = 37;
+                        System.out.println(c * 9 / 5 + 32);   // 98 — integer division drops .6
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output>
+                36.6 °C = 97.9 °F
+                98
+              </script>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 2 — Seconds to h:m:s <span class="badge blue">Medium</span></summary>
+            <div class="ex-body">
+              <p>Given <code>int total = 9_876;</code> seconds, print <code>2h 44m 36s</code> using only <code>/</code> and <code>%</code>.</p>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run>
+                public class Duration {
+                    public static void main(String[] args) {
+                        int total = 9_876;
+                        int hours = total / 3600;
+                        int minutes = total % 3600 / 60;
+                        int seconds = total % 60;
+                        System.out.println(hours + "h " + minutes + "m " + seconds + "s");
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output>
+                2h 44m 36s
+              </script>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 3 — Spot the overflow <span class="badge amber">Challenge</span></summary>
+            <div class="ex-body">
+              <p>A programmer computes the number of milliseconds in 30 days as <code>long ms = 30 * 24 * 60 * 60 * 1000;</code> and gets a negative number. Explain why, and fix it with one character.</p>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run>
+                public class Millis {
+                    public static void main(String[] args) {
+                        long wrong = 30 * 24 * 60 * 60 * 1000;   // int arithmetic overflows, THEN widens
+                        long right = 30L * 24 * 60 * 60 * 1000;  // L makes the whole chain long
+                        System.out.println(wrong);
+                        System.out.println(right);
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output>
+                -1702967296
+                2592000000
+              </script>
+            </div>
+          </details>
+        </section>
+
+        <section class="doc-section" id="quiz" data-title="Quiz">
+          <div class="sec-head"><h2><span class="sec-num">3.9</span>Quiz</h2></div>
+          <script type="application/json" data-quiz>
+          [
+            {"q": "What is the value of `x` after `int x = 7 / 2;`?", "options": ["3.5", "3", "4", "Compile error"], "answer": 1, "explain": "Both operands are `int`, so `/` performs integer division and discards the fraction."},
+            {"q": "Which declaration does NOT compile?", "options": ["`long n = 5;`", "`double d = 5;`", "`float f = 1.5;`", "`var s = \"hi\";`"], "answer": 2, "explain": "`1.5` is a `double` literal; narrowing it to `float` needs `1.5f` or a cast."},
+            {"q": "`Integer a = 1000, b = 1000;` — what does `a == b` evaluate to?", "options": ["`true`", "`false`", "Compile error", "It throws an exception"], "answer": 1, "explain": "`==` compares references. Only values from -128 to 127 are cached, so these are two different objects. Use `a.equals(b)`."},
+            {"q": "What does `var` do?", "options": ["Makes a variable dynamically typed", "Infers a local variable's static type from its initialiser", "Declares a constant", "Can be used for fields and parameters"], "answer": 1, "explain": "`var` is compile-time inference for local variables only; the type is fixed once inferred."},
+            {"q": "Which is the right way to represent €19.99 for calculations?", "options": ["`double price = 19.99;`", "`float price = 19.99f;`", "`long cents = 1999;` or `new BigDecimal(\"19.99\")`", "`int price = 19.99;`"], "answer": 2, "explain": "Binary floating point can't represent most decimal fractions exactly. Use integer cents or BigDecimal built from a String."}
+          ]
+          </script>
+        </section>
+
+        <section class="doc-section" id="references-reading" data-title="Further reading">
+          <div class="sec-head"><h2><span class="sec-num">3.10</span>Further reading</h2></div>
+          <ul>
+            <li><a href="https://dev.java/learn/language-basics/variables/" target="_blank" rel="noopener">dev.java — Creating variables and naming them</a></li>
+            <li><a href="https://dev.java/learn/language-basics/primitive-types/" target="_blank" rel="noopener">dev.java — Primitive types</a></li>
+            <li><a href="https://dev.java/learn/language-basics/using-operators/" target="_blank" rel="noopener">dev.java — Using operators</a></li>
+            <li><a href="https://openjdk.org/projects/amber/guides/lvti-style-guide" target="_blank" rel="noopener">Local variable type inference style guide</a></li>
+          </ul>
+        </section>
+
+        <div id="pager"></div>
+      </div>
+    </main>
+  </div>
+  <div id="site-footer"></div>
+  <script src="assets/js/core.js?v=__BUILD__"></script>
+</body>
+</html>

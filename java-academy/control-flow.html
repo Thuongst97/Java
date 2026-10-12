@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Control Flow — Java Academy</title>
+  <meta name="description" content="if/else, classic and arrow switch, switch expressions with yield, while, do-while, for, for-each, break, continue and labels in Java.">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="assets/css/main.css?v=__BUILD__">
+  <script>try{var t=localStorage.getItem("ja-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body data-page="control-flow">
+  <div id="site-header"></div>
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+      <div class="content-inner">
+
+        <header class="page-hero">
+          <nav class="crumbs"><a href="index.html">Home</a><span>/</span><span>Java Fundamentals</span><span>/</span><span>Lesson 04</span></nav>
+          <div class="eyebrow">Lesson 04 · Java Fundamentals</div>
+          <h1>Control Flow</h1>
+          <p class="lead">Programs make decisions and repeat work. Master <code>if</code>, the modern <code>switch</code> expression, every kind of loop, and the keywords that steer them.</p>
+          <div class="page-meta"><span>⏱ 45 min</span><span>🎯 Beginner</span><span>🧩 Prerequisite: lesson 03</span></div>
+          <div class="objectives">
+            <h4>You will be able to</h4>
+            <ul>
+              <li>Branch with <code>if</code> / <code>else if</code> / <code>else</code></li>
+              <li>Use arrow-<code>switch</code> and switch <em>expressions</em></li>
+              <li>Avoid the classic fall-through bug</li>
+              <li>Choose between <code>while</code>, <code>do-while</code>, <code>for</code> and for-each</li>
+              <li>Use <code>break</code>, <code>continue</code> and labels</li>
+              <li>Trace nested loops by hand</li>
+            </ul>
+          </div>
+        </header>
+
+        <section class="doc-section" id="if" data-title="if / else">
+          <div class="sec-head"><h2><span class="sec-num">4.1</span><code>if</code>, <code>else if</code>, <code>else</code></h2></div>
+          <p>The condition in parentheses must be a <code>boolean</code> — Java will not treat <code>0</code> or <code>null</code> as false. The first branch whose condition is true runs; the rest are skipped.</p>
+          <script type="text/plain" data-code="java" data-file="Grades.java" data-run>
+            public class Grades {
+                public static void main(String[] args) {
+                    int[] scores = {95, 82, 67, 40};
+                    for (int score : scores) {
+                        String grade;
+                        if (score >= 90) {
+                            grade = "A";
+                        } else if (score >= 80) {
+                            grade = "B";
+                        } else if (score >= 65) {
+                            grade = "C";
+                        } else {
+                            grade = "F";
+                        }
+                        System.out.println(score + " → " + grade);
+                    }
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            95 → A
+            82 → B
+            67 → C
+            40 → F
+          </script>
+          <div class="callout warn">
+            <div class="ci">⚠️</div>
+            <div><span class="ct">Always use braces</span>
+              <p>Without <code>{ }</code> only the <em>next statement</em> belongs to the <code>if</code>. Adding a second indented line later silently runs it every time. Android Studio's formatter and every style guide insist on braces — so should you.</p>
+            </div>
+          </div>
+          <script type="text/plain" data-code="java" data-file="Trap.java">
+            if (isAdmin)
+                deleteEverything();
+                logOut();          // ✗ looks conditional, but ALWAYS runs
+          </script>
+        </section>
+
+        <section class="doc-section" id="switch" data-title="switch">
+          <div class="sec-head"><h2><span class="sec-num">4.2</span>The classic <code>switch</code> statement</h2></div>
+          <p><code>switch</code> compares one value against constant <code>case</code> labels. It works with <code>int</code>, <code>char</code>, <code>String</code>, enums (and, with patterns, any type — lesson 09). In the old colon form, execution <b>falls through</b> into the next case unless you <code>break</code>:</p>
+          <script type="text/plain" data-code="java" data-file="FallThrough.java" data-run>
+            public class FallThrough {
+                public static void main(String[] args) {
+                    int day = 6;
+                    switch (day) {
+                        case 6:
+                        case 7:
+                            System.out.println("Weekend");
+                            break;               // without this…
+                        case 1:
+                            System.out.println("Monday blues");   // …this would run too
+                            break;
+                        default:
+                            System.out.println("Weekday");
+                    }
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            Weekend
+          </script>
+        </section>
+
+        <section class="doc-section" id="switch-expressions" data-title="Arrow switch & switch expressions">
+          <div class="sec-head"><h2><span class="sec-num">4.3</span>Arrow <code>switch</code> and switch expressions</h2></div>
+          <p>Since Java 14, <code>case X -&gt;</code> labels never fall through, can list several values, and a <code>switch</code> can be an <b>expression</b> that produces a value. Prefer this form in new code.</p>
+          <script type="text/plain" data-code="java" data-file="SwitchExpr.java" data-run>
+            public class SwitchExpr {
+                public static void main(String[] args) {
+                    String[] days = {"MON", "SAT", "WED", "XYZ"};
+                    for (String day : days) {
+                        String kind = switch (day) {
+                            case "SAT", "SUN" -> "weekend";
+                            case "MON", "TUE", "WED", "THU", "FRI" -> "weekday";
+                            default -> "unknown";
+                        };
+                        System.out.println(day + " is a " + kind);
+                    }
+
+                    int month = 2, year = 2024;
+                    int days29 = switch (month) {
+                        case 4, 6, 9, 11 -> 30;
+                        case 2 -> {                          // a block needs yield
+                            boolean leap = (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
+                            yield leap ? 29 : 28;
+                        }
+                        default -> 31;
+                    };
+                    System.out.println("Days in February " + year + ": " + days29);
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            MON is a weekday
+            SAT is a weekend
+            WED is a weekday
+            XYZ is a unknown
+            Days in February 2024: 29
+          </script>
+          <div class="callout tip">
+            <div class="ci">💡</div>
+            <div><span class="ct">Exhaustiveness</span>
+              <p>A switch <em>expression</em> must cover every possible value, so you usually need <code>default</code>. With an <b>enum</b> or a <b>sealed</b> type (lesson 09), listing every constant is enough — and the compiler tells you when someone adds a new one.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="while" data-title="while & do-while">
+          <div class="sec-head"><h2><span class="sec-num">4.4</span><code>while</code> and <code>do-while</code></h2></div>
+          <p><code>while</code> checks the condition <em>before</em> each iteration (may run zero times). <code>do-while</code> checks <em>after</em> (always runs at least once) — handy for “ask until valid” input loops.</p>
+          <script type="text/plain" data-code="java" data-file="Loops.java" data-run>
+            public class Loops {
+                public static void main(String[] args) {
+                    int n = 27, steps = 0;
+                    while (n != 1) {                  // the Collatz sequence
+                        n = (n % 2 == 0) ? n / 2 : 3 * n + 1;
+                        steps++;
+                    }
+                    System.out.println("27 reaches 1 after " + steps + " steps");
+
+                    int attempts = 0;
+                    do {
+                        attempts++;
+                    } while (attempts < 0);           // false immediately — body still ran once
+                    System.out.println("attempts = " + attempts);
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            27 reaches 1 after 111 steps
+            attempts = 1
+          </script>
+        </section>
+
+        <section class="doc-section" id="for" data-title="for & for-each">
+          <div class="sec-head"><h2><span class="sec-num">4.5</span><code>for</code> and the enhanced for-each loop</h2></div>
+          <p>The classic <code>for (init; condition; update)</code> is ideal for counting. The <b>for-each</b> loop <code>for (Type x : collection)</code> visits every element of an array or collection without an index.</p>
+          <script type="text/plain" data-code="java" data-file="ForLoops.java" data-run>
+            public class ForLoops {
+                public static void main(String[] args) {
+                    for (int i = 1; i <= 5; i++) {
+                        System.out.print(i + " ");
+                    }
+                    System.out.println();
+
+                    for (int i = 10; i > 0; i -= 3) {       // count down in steps of 3
+                        System.out.print(i + " ");
+                    }
+                    System.out.println();
+
+                    String[] fruits = {"apple", "banana", "cherry"};
+                    for (String fruit : fruits) {
+                        System.out.print(fruit.toUpperCase() + " ");
+                    }
+                    System.out.println();
+
+                    for (int i = 0, j = fruits.length - 1; i < j; i++, j--) { // two variables
+                        System.out.println(fruits[i] + " <-> " + fruits[j]);
+                    }
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            1 2 3 4 5 
+            10 7 4 1 
+            APPLE BANANA CHERRY 
+            apple <-> cherry
+          </script>
+          <div class="callout note">
+            <div class="ci">🔁</div>
+            <div><span class="ct">Which loop?</span>
+              <p><b>for-each</b> when you need every element · <b>for</b> when you need the index or a custom step · <b>while</b> when you don't know in advance how many iterations · <b>do-while</b> when the body must run once. Lesson 13 adds streams, which often replace loops entirely.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="jumps" data-title="break, continue & labels">
+          <div class="sec-head"><h2><span class="sec-num">4.6</span><code>break</code>, <code>continue</code> and labels</h2></div>
+          <p><code>break</code> leaves the innermost loop (or switch); <code>continue</code> skips to its next iteration. A <b>label</b> lets you target an outer loop.</p>
+          <script type="text/plain" data-code="java" data-file="Jumps.java" data-run>
+            public class Jumps {
+                public static void main(String[] args) {
+                    for (int i = 1; i <= 10; i++) {
+                        if (i % 2 == 0) continue;      // skip even numbers
+                        if (i > 7) break;              // stop completely
+                        System.out.print(i + " ");
+                    }
+                    System.out.println();
+
+                    int[][] grid = {{1, 2, 3}, {4, -5, 6}, {7, 8, 9}};
+                    search:
+                    for (int row = 0; row < grid.length; row++) {
+                        for (int col = 0; col < grid[row].length; col++) {
+                            if (grid[row][col] < 0) {
+                                System.out.println("First negative at [" + row + "][" + col + "]");
+                                break search;          // leaves BOTH loops
+                            }
+                        }
+                    }
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            1 3 5 7 
+            First negative at [1][1]
+          </script>
+          <p class="small muted">Labels are rare in practice; extracting the nested loops into a method and using <code>return</code> (lesson 05) is usually clearer.</p>
+        </section>
+
+        <section class="doc-section" id="nested" data-title="Nested loops">
+          <div class="sec-head"><h2><span class="sec-num">4.7</span>Nested loops: tracing by hand</h2></div>
+          <p>The inner loop runs completely for <em>each</em> iteration of the outer loop. Being able to predict output like this is a core skill — try before running.</p>
+          <script type="text/plain" data-code="java" data-file="Triangle.java" data-run>
+            public class Triangle {
+                public static void main(String[] args) {
+                    int height = 4;
+                    for (int row = 1; row <= height; row++) {
+                        System.out.print(" ".repeat(height - row));
+                        for (int star = 0; star < 2 * row - 1; star++) {
+                            System.out.print("*");
+                        }
+                        System.out.println();
+                    }
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+               *
+              ***
+             *****
+            *******
+          </script>
+        </section>
+
+        <section class="doc-section" id="exercises" data-title="Exercises">
+          <div class="sec-head"><h2><span class="sec-num">4.8</span>Exercises</h2></div>
+          <details class="exercise">
+            <summary>Exercise 1 — FizzBuzz <span class="badge green">Easy</span></summary>
+            <div class="ex-body">
+              <p>Print 1 to 15, but “Fizz” for multiples of 3, “Buzz” for multiples of 5 and “FizzBuzz” for both. Write it once with <code>if</code> and once with a switch expression.</p>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run>
+                public class FizzBuzz {
+                    public static void main(String[] args) {
+                        for (int i = 1; i <= 15; i++) {
+                            String out = switch (i % 15) {
+                                case 0 -> "FizzBuzz";
+                                case 3, 6, 9, 12 -> "Fizz";
+                                case 5, 10 -> "Buzz";
+                                default -> String.valueOf(i);
+                            };
+                            System.out.print(out + " ");
+                        }
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output>
+                1 2 Fizz 4 Buzz Fizz 7 8 Fizz Buzz 11 Fizz 13 14 FizzBuzz
+              </script>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 2 — Guess the number <span class="badge blue">Medium</span></summary>
+            <div class="ex-body">
+              <p>The secret is 42. Read guesses until the user finds it, answering “higher” or “lower”, then print the number of attempts.</p>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run data-stdin="50\n25\n42">
+                import java.util.Scanner;
+
+                public class Guess {
+                    public static void main(String[] args) {
+                        Scanner in = new Scanner(System.in);
+                        int secret = 42, attempts = 0, guess;
+                        do {
+                            System.out.print("Your guess: ");
+                            guess = in.nextInt();
+                            attempts++;
+                            if (guess < secret) System.out.println("higher");
+                            else if (guess > secret) System.out.println("lower");
+                        } while (guess != secret);
+                        System.out.println("Correct in " + attempts + " attempts!");
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output="Output with input 50 / 25 / 42">
+                Your guess: lower
+                Your guess: higher
+                Your guess: Correct in 3 attempts!
+              </script>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 3 — Primes below 50 <span class="badge amber">Challenge</span></summary>
+            <div class="ex-body">
+              <p>Print every prime number below 50. A number is prime if no divisor from 2 up to its square root divides it. Use a labelled <code>continue</code>.</p>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run>
+                public class Primes {
+                    public static void main(String[] args) {
+                        candidates:
+                        for (int n = 2; n < 50; n++) {
+                            for (int d = 2; d * d <= n; d++) {
+                                if (n % d == 0) continue candidates;   // not prime: try next n
+                            }
+                            System.out.print(n + " ");
+                        }
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output>
+                2 3 5 7 11 13 17 19 23 29 31 37 41 43 47
+              </script>
+            </div>
+          </details>
+        </section>
+
+        <section class="doc-section" id="quiz" data-title="Quiz">
+          <div class="sec-head"><h2><span class="sec-num">4.9</span>Quiz</h2></div>
+          <script type="application/json" data-quiz>
+          [
+            {"q": "Does `if (count) { … }` compile when `count` is an `int`?", "options": ["Yes, 0 means false", "No — the condition must be a boolean", "Only if count is final", "Yes, but it warns"], "answer": 1, "explain": "Java has no truthiness. Write `if (count != 0)`."},
+            {"q": "What prints?", "code": "int x = 2;\nswitch (x) {\n    case 1: System.out.print(\"a\");\n    case 2: System.out.print(\"b\");\n    case 3: System.out.print(\"c\");\n}", "options": ["`b`", "`bc`", "`abc`", "Nothing"], "answer": 1, "explain": "Colon-style cases fall through: execution starts at case 2 and continues into case 3 because there's no `break`. Arrow cases never fall through."},
+            {"q": "In a switch expression, how does a `case` block return its value?", "options": ["`return`", "`break value`", "`yield value`", "The last expression is returned automatically"], "answer": 2, "explain": "`yield` produces the value of a block in a switch expression. `return` would leave the whole method."},
+            {"q": "How many times does the body of `do { … } while (false);` run?", "options": ["0", "1", "Infinitely", "It doesn't compile"], "answer": 1, "explain": "do-while tests the condition after the body, so the body runs exactly once."},
+            {"q": "What does `break` inside an inner loop do (without a label)?", "options": ["Exits the method", "Exits both loops", "Exits only the innermost loop", "Skips to the next iteration"], "answer": 2, "explain": "Unlabelled `break` targets the innermost enclosing loop or switch. Use a label (`break outer;`) to exit an outer loop."}
+          ]
+          </script>
+        </section>
+
+        <section class="doc-section" id="references" data-title="Further reading">
+          <div class="sec-head"><h2><span class="sec-num">4.10</span>Further reading</h2></div>
+          <ul>
+            <li><a href="https://dev.java/learn/language-basics/controlling-flow/" target="_blank" rel="noopener">dev.java — Control flow statements</a></li>
+            <li><a href="https://dev.java/learn/language-basics/switch-expressions/" target="_blank" rel="noopener">dev.java — Branching with switch expressions</a></li>
+            <li><a href="https://openjdk.org/jeps/361" target="_blank" rel="noopener">JEP 361 — Switch expressions</a></li>
+          </ul>
+        </section>
+
+        <div id="pager"></div>
+      </div>
+    </main>
+  </div>
+  <div id="site-footer"></div>
+  <script src="assets/js/core.js?v=__BUILD__"></script>
+</body>
+</html>

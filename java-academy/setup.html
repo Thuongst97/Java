@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Toolkit: JDK &amp; Android Studio — Java Academy</title>
+  <meta name="description" content="Install Android Studio, use its bundled JDK, run plain Java programs in a library module, and set up the Android SDK, an emulator and a real device.">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="assets/css/main.css?v=__BUILD__">
+  <script>try{var t=localStorage.getItem("ja-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body data-page="setup">
+  <div id="site-header"></div>
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+      <div class="content-inner">
+
+        <header class="page-hero">
+          <nav class="crumbs"><a href="index.html">Home</a><span>/</span><span>Getting Started</span><span>/</span><span>Lesson 01</span></nav>
+          <div class="eyebrow">Lesson 01 · Getting Started</div>
+          <h1>Toolkit: JDK &amp; Android Studio</h1>
+          <p class="lead">This whole course runs inside <b>Android Studio</b>. In this lesson you install it, discover the JDK hidden inside it, create a workspace where you can run plain Java programs for lessons 02–16, and wire up the Android SDK, an emulator and a real phone for lessons 17–22.</p>
+          <div class="page-meta"><span>⏱ ~60 min (mostly downloads)</span><span>🎯 Beginner</span><span>💻 Windows · macOS · Linux</span></div>
+          <div class="objectives">
+            <h4>You will be able to</h4>
+            <ul>
+              <li>Explain what the JDK, JVM, IDE, SDK and Gradle each do</li>
+              <li>Install Android Studio on your OS</li>
+              <li>Run plain Java <code>main</code> methods inside Android Studio</li>
+              <li>Use <code>javac</code>, <code>java</code> and <code>jshell</code> from a terminal</li>
+              <li>Create an emulator and connect a real phone</li>
+              <li>Fix the most common setup errors yourself</li>
+            </ul>
+          </div>
+        </header>
+
+        <section class="doc-section" id="overview" data-title="The toolkit at a glance">
+          <div class="sec-head"><h2><span class="sec-num">1.1</span>The toolkit at a glance</h2></div>
+          <p>Java is a language; to <em>use</em> it you need a few tools that work together. Here is the path from the code you type to a running program:</p>
+          <div class="flow" aria-label="From source code to running app">
+            <div class="fbox">✍️ Android Studio<small>edit · run · debug</small></div><span class="farrow">→</span>
+            <div class="fbox">🐘 Gradle<small>build automation</small></div><span class="farrow">→</span>
+            <div class="fbox">🧪 javac<small>Java compiler</small></div><span class="farrow">→</span>
+            <div class="fbox">☕ JVM / 🤖 ART<small>desktop / Android runtime</small></div>
+          </div>
+          <div class="table-wrap">
+            <table class="t">
+              <thead><tr><th>Tool</th><th>What it is</th><th>Needed for</th></tr></thead>
+              <tbody>
+                <tr><td><b>Android Studio</b></td><td>Google's official IDE for Android, built on IntelliJ IDEA. Excellent Java editor, debugger and profiler.</td><td>Everything in this course.</td></tr>
+                <tr><td><b>JDK</b> (Java Development Kit)</td><td>The compiler <code>javac</code>, the <b>JVM</b> that runs bytecode, the standard library and tools like <code>jshell</code>. Android Studio <b>bundles one</b> (the JetBrains Runtime, “JBR”).</td><td>Compiling and running Java; running Gradle.</td></tr>
+                <tr><td><b>Android SDK</b></td><td>Platform libraries (<code>android.jar</code>), build tools, <code>adb</code>, emulator images.</td><td>Lessons 17–22.</td></tr>
+                <tr><td><b>Gradle</b></td><td>The build system. Downloaded automatically by the Gradle Wrapper (<code>gradlew</code>) in every project.</td><td>Every project.</td></tr>
+                <tr><td><b>Emulator / device</b></td><td>Where your Android app runs.</td><td>Lessons 17–22.</td></tr>
+                <tr><td><b>▶ Run on this site</b></td><td>Every runnable example can be edited and executed in your browser on a real JDK (via the free Compiler Explorer service).</td><td>Quick experiments, zero install.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="callout tip">
+            <div class="ci">🚀</div>
+            <div><span class="ct">In a hurry?</span>
+              <p>You can start lesson 02 right now with the <b>▶ Run</b> buttons and come back to finish this setup while downloads run. But typing code into a real IDE, reading its warnings and using its debugger is a skill in itself — don't skip it for long.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="requirements" data-title="System requirements">
+          <div class="sec-head"><h2><span class="sec-num">1.2</span>System requirements &amp; virtualization</h2></div>
+          <p>Android Studio, the Gradle daemon and the emulator each run in their own process. Practical numbers, slightly above the official minimums:</p>
+          <div class="table-wrap">
+            <table class="t">
+              <thead><tr><th>Resource</th><th>Minimum</th><th>Comfortable</th></tr></thead>
+              <tbody>
+                <tr><td>OS</td><td>Windows 10 64-bit · macOS 12+ · 64-bit Linux</td><td>Windows 11 · latest macOS · Ubuntu 22.04+</td></tr>
+                <tr><td>RAM</td><td>8 GB</td><td><b>16 GB or more</b></td></tr>
+                <tr><td>Free disk</td><td>16 GB</td><td>32 GB+ on an SSD</td></tr>
+                <tr><td>CPU</td><td>64-bit x86_64 with virtualization, or Apple Silicon</td><td>Modern 8-core CPU</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <h3>Check that hardware virtualization is enabled</h3>
+          <p>The emulator runs a whole virtual phone; without hardware acceleration it is unusably slow. (Plain Java lessons don't need this — only lessons 17+.)</p>
+          <div class="tabs" data-group="os">
+            <div class="tab-list"><button data-tab="win">🪟 Windows</button><button data-tab="mac">🍎 macOS</button><button data-tab="linux">🐧 Linux</button></div>
+            <div class="tab-panel" data-panel="win">
+              <p>Open <b>Task Manager → Performance → CPU</b> and look for <b>Virtualization: Enabled</b>. If it is disabled, enable <b>Intel VT-x</b> / <b>AMD-V (SVM)</b> in your BIOS/UEFI. Then turn on the <b>Windows Hypervisor Platform</b>:</p>
+              <script type="text/plain" data-code="powershell" data-file="PowerShell (Run as Administrator)">
+                PS> Enable-WindowsOptionalFeature -Online -FeatureName HypervisorPlatform -All
+                # Reboot when asked.
+              </script>
+            </div>
+            <div class="tab-panel" data-panel="mac">
+              <p>Nothing to do — macOS uses the built-in <b>Hypervisor.framework</b>. On Apple Silicon pick <b>arm64-v8a</b> system images later.</p>
+            </div>
+            <div class="tab-panel" data-panel="linux">
+              <script type="text/plain" data-code="bash" data-file="Terminal">
+                $ egrep -c '(vmx|svm)' /proc/cpuinfo   # > 0 means the CPU supports it
+                $ sudo apt install qemu-kvm cpu-checker
+                $ kvm-ok                             # "KVM acceleration can be used"
+                $ sudo adduser $USER kvm             # then log out and back in
+              </script>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="android-studio" data-title="Install Android Studio">
+          <div class="sec-head"><h2><span class="sec-num">1.3</span>Install Android Studio</h2></div>
+          <p>Download the latest <b>stable</b> release from <a href="https://developer.android.com/studio" target="_blank" rel="noopener">developer.android.com/studio</a>. Avoid Canary/Beta builds while learning.</p>
+          <div class="tabs" data-group="os">
+            <div class="tab-list"><button data-tab="win">🪟 Windows</button><button data-tab="mac">🍎 macOS</button><button data-tab="linux">🐧 Linux</button></div>
+            <div class="tab-panel" data-panel="win">
+              <ol>
+                <li>Run <code>android-studio-*-windows.exe</code> and keep both components ticked (<b>Android Studio</b>, <b>Android Virtual Device</b>).</li>
+                <li>Keep the default folder <code>C:\Program Files\Android\Android Studio</code>.</li>
+                <li>Launch it from the Start menu.</li>
+              </ol>
+              <p class="small muted">Prefer winget? <code>winget install Google.AndroidStudio</code></p>
+            </div>
+            <div class="tab-panel" data-panel="mac">
+              <ol>
+                <li>Open the <code>.dmg</code> — pick the <b>Mac with Apple chip</b> build on M-series Macs.</li>
+                <li>Drag <b>Android Studio</b> into <b>Applications</b> and launch it.</li>
+              </ol>
+              <p class="small muted">Prefer Homebrew? <code>brew install --cask android-studio</code></p>
+            </div>
+            <div class="tab-panel" data-panel="linux">
+              <script type="text/plain" data-code="bash" data-file="Terminal">
+                $ sudo tar -xzf android-studio-*-linux.tar.gz -C /opt
+                $ /opt/android-studio/bin/studio.sh
+                # Inside Android Studio: Tools → Create Desktop Entry… for a launcher icon
+              </script>
+            </div>
+          </div>
+          <h3>The Setup Wizard</h3>
+          <ol class="steps">
+            <li><b>Import settings</b>Choose <em>Do not import settings</em> on a fresh install.</li>
+            <li><b>Install type: Standard</b>It installs the recommended SDK platform, build tools, platform-tools (<code>adb</code>) and the emulator.</li>
+            <li><b>Accept the licenses</b>Click each license on the left and choose <b>Accept</b> — <em>Finish</em> stays disabled until all are accepted.</li>
+            <li><b>Wait for the downloads</b>1–3 GB. When you see the Welcome screen, you're done.</li>
+          </ol>
+          <div class="callout warn">
+            <div class="ci">⚠️</div>
+            <div><span class="ct">Remember your SDK path</span>
+              <p>Defaults: Windows <code>%LOCALAPPDATA%\Android\Sdk</code>, macOS <code>~/Library/Android/sdk</code>, Linux <code>~/Android/Sdk</code>. Avoid paths with spaces or non-ASCII characters.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="jdk" data-title="The JDK inside Android Studio">
+          <div class="sec-head"><h2><span class="sec-num">1.4</span>The JDK inside Android Studio</h2></div>
+          <p>Android Studio ships with the <b>JetBrains Runtime (JBR)</b> — a complete OpenJDK 21 build. Gradle uses it to build your projects, and you can use it to compile and run plain Java too. Nothing else to install.</p>
+          <p>Check which JDK Gradle uses: <b>Settings → Build, Execution, Deployment → Build Tools → Gradle → Gradle JDK</b>. It should say <em>jbr-21</em> (“Embedded JDK”).</p>
+          <h3>Use the bundled JDK from a terminal</h3>
+          <p>Android Studio's built-in <b>Terminal</b> tool window (<kbd>Alt</kbd>+<kbd>F12</kbd> / <kbd>⌥</kbd>+<kbd>F12</kbd>) is handy, but <code>java</code> is only found if it's on your <code>PATH</code>. Point <code>JAVA_HOME</code> at the bundled JBR:</p>
+          <div class="tabs" data-group="os">
+            <div class="tab-list"><button data-tab="win">🪟 Windows</button><button data-tab="mac">🍎 macOS</button><button data-tab="linux">🐧 Linux</button></div>
+            <div class="tab-panel" data-panel="win">
+              <script type="text/plain" data-code="powershell" data-file="PowerShell">
+                PS> [Environment]::SetEnvironmentVariable("JAVA_HOME", "C:\Program Files\Android\Android Studio\jbr", "User")
+                PS> $p = [Environment]::GetEnvironmentVariable("Path", "User")
+                PS> [Environment]::SetEnvironmentVariable("Path", "$p;C:\Program Files\Android\Android Studio\jbr\bin", "User")
+                # Open a NEW terminal, then:
+                PS> java -version
+              </script>
+            </div>
+            <div class="tab-panel" data-panel="mac">
+              <script type="text/plain" data-code="bash" data-file="~/.zshrc">
+                export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
+                export PATH="$JAVA_HOME/bin:$PATH"
+              </script>
+              <p>Then <code>source ~/.zshrc</code> and run <code>java -version</code>.</p>
+            </div>
+            <div class="tab-panel" data-panel="linux">
+              <script type="text/plain" data-code="bash" data-file="~/.bashrc">
+                export JAVA_HOME="/opt/android-studio/jbr"
+                export PATH="$JAVA_HOME/bin:$PATH"
+              </script>
+              <p>Then <code>source ~/.bashrc</code> and run <code>java -version</code>.</p>
+            </div>
+          </div>
+          <script type="text/plain" data-output="Expected (exact numbers will differ)">
+            openjdk version "21.0.x" …
+            OpenJDK Runtime Environment (build 21.0.x+…-b…)
+            OpenJDK 64-Bit Server VM (build 21.0.x+…, mixed mode)
+          </script>
+          <div class="callout note">
+            <div class="ci">ℹ️</div>
+            <div><span class="ct">Want a standalone JDK instead?</span>
+              <p>That's fine too: install <b>Eclipse Temurin 21</b> from <a href="https://adoptium.net" target="_blank" rel="noopener">adoptium.net</a> (or <code>winget install EclipseAdoptium.Temurin.21.JDK</code>, <code>brew install --cask temurin@21</code>, <code>sudo apt install openjdk-21-jdk</code>). This course uses <b>Java 21</b>, the current long-term-support version that every tool supports; newer JDKs (25+) run all the examples too.</p>
+            </div>
+          </div>
+          <div class="callout java">
+            <div class="ci">🧠</div>
+            <div><span class="ct">JDK, JRE, JVM — what's the difference?</span>
+              <dl class="kv">
+                <dt>JVM</dt><dd>The Java Virtual Machine: the program that loads <code>.class</code> files (bytecode) and executes them, compiling hot code to machine code on the fly.</dd>
+                <dt>JRE</dt><dd>JVM + standard library — enough to <em>run</em> Java. Modern JDKs no longer ship a separate JRE.</dd>
+                <dt>JDK</dt><dd>JRE + developer tools: <code>javac</code>, <code>jshell</code>, <code>javadoc</code>, <code>jar</code>, <code>jdb</code>… What you install as a developer.</dd>
+              </dl>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="java-module" data-title="A workspace for plain Java">
+          <div class="sec-head"><h2><span class="sec-num">1.5</span>Create a workspace for plain Java</h2></div>
+          <p>Android Studio is focused on apps, but it runs ordinary Java programs perfectly well. We'll create one project, <b>JavaAcademy</b>, that holds a <b>pure Java module</b> for lessons 02–16. Each lesson's examples become classes with a <code>main</code> method you run with one click.</p>
+          <ol class="steps">
+            <li><b>New project</b>On the Welcome screen choose <b>New Project → Phone and Tablet → No Activity</b>. Name: <code>JavaAcademy</code>; Package name: <code>com.example.javaacademy</code>; <b>Language: Java</b>; Minimum SDK: <b>API 26</b>; Build configuration language: <b>Kotlin DSL</b>. Click <b>Finish</b> and wait for the first Gradle sync.</li>
+            <li><b>Add a Java library module</b><b>File → New → New Module… → Java or Kotlin Library</b>. Library name: <code>lessons</code>; Package name: <code>com.example.lessons</code>; Class name: <code>Main</code>; <b>Language: Java</b>. Click <b>Finish</b>.</li>
+            <li><b>Raise the language level to Java 21</b>Open <code>lessons/build.gradle.kts</code> and set both compatibility values to <code>VERSION_21</code> (snippet below), then click <b>Sync Now</b> in the yellow banner.</li>
+            <li><b>Write a main method</b>Open <code>lessons/src/main/java/com/example/lessons/Main.java</code> and replace its contents with the program below.</li>
+            <li><b>Run it</b>Click the green ▶ in the gutter next to <code>public static void main</code> and choose <b>Run 'Main.main()'</b>. The output appears in the <b>Run</b> tool window. From now on, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>F10</kbd> (<kbd>⌃</kbd>+<kbd>⇧</kbd>+<kbd>R</kbd> on macOS) runs the file you're in.</li>
+          </ol>
+          <script type="text/plain" data-code="kts" data-file="lessons/build.gradle.kts">
+            plugins {
+                id("java-library")
+            }
+
+            java {
+                sourceCompatibility = JavaVersion.VERSION_21   //!
+                targetCompatibility = JavaVersion.VERSION_21   //!
+            }
+          </script>
+          <script type="text/plain" data-code="java" data-file="lessons/src/main/java/com/example/lessons/Main.java" data-run>
+            public class Main {
+                public static void main(String[] args) {
+                    System.out.println("Java " + Runtime.version().feature() + " is ready in Android Studio!");
+                }
+            }
+          </script>
+          <p class="small muted">On this website the example omits the <code>package</code> line so it can run in the browser. In Android Studio keep the <code>package com.example.lessons;</code> line the IDE generated at the top of each file — it must match the folder the file lives in.</p>
+          <div class="filetree"><span class="d">JavaAcademy/</span>
+├── <span class="d">app/</span>                         <span class="c"># an (empty) Android app module — used from lesson 17</span>
+├── <span class="d">lessons/</span>                     <span class="c"># ← plain Java: lessons 02–16</span>
+│   ├── build.gradle.kts         <span class="c"># java-library plugin, Java 21</span>
+│   └── <span class="d">src/main/java/com/example/lessons/</span>
+│       ├── Main.java
+│       └── <span class="d">l03/</span> Variables.java …    <span class="c"># one package per lesson keeps things tidy</span>
+├── <span class="d">gradle/</span>libs.versions.toml     <span class="c"># version catalog (lesson 17)</span>
+├── settings.gradle.kts          <span class="c"># include(":app", ":lessons")</span>
+└── gradlew / gradlew.bat        <span class="c"># Gradle wrapper</span></div>
+          <div class="callout tip">
+            <div class="ci">💡</div>
+            <div><span class="ct">Organise by lesson</span>
+              <p>Right-click <code>com.example.lessons → New → Package</code> and create <code>l02</code>, <code>l03</code>, … Inside, <b>New → Java Class</b>. Every class may have its own <code>main</code>; run whichever one you're working on. The Run tool window keeps a tab per run so you can compare outputs.</p>
+            </div>
+          </div>
+          <h3>Programs that read keyboard input</h3>
+          <p>When a program reads from <code>System.in</code> (lesson 02), click into the <b>Run</b> tool window and type there, then press <kbd>Enter</kbd>. To pass command-line arguments use <b>Run → Edit Configurations… → Program arguments</b>.</p>
+          <h3>Quick experiments: scratch files &amp; JShell</h3>
+          <ul>
+            <li><b>Scratch files</b>: <b>File → New → Scratch File → Java</b> (<kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>Insert</kbd> / <kbd>⌘</kbd>+<kbd>⇧</kbd>+<kbd>N</kbd>) creates a throw-away file outside the project, with full code completion; run its <code>main</code> from the gutter.</li>
+            <li><b>JShell</b>: the Java REPL. Type expressions and see results instantly — great for trying an API (more in the next section).</li>
+          </ul>
+        </section>
+
+        <section class="doc-section" id="cli" data-title="Java on the command line">
+          <div class="sec-head"><h2><span class="sec-num">1.6</span>Java on the command line</h2></div>
+          <p>An IDE is just a friendly front end for these commands. Knowing them helps you understand build errors and CI logs. Create <code>Hello.java</code> anywhere:</p>
+          <script type="text/plain" data-code="java" data-file="Hello.java" data-run>
+            public class Hello {
+                public static void main(String[] args) {
+                    System.out.println("Hello from the command line!");
+                }
+            }
+          </script>
+          <script type="text/plain" data-code="bash" data-file="Terminal">
+            $ javac Hello.java          # compile → creates Hello.class (bytecode)
+            $ java Hello                # run the class on the JVM
+            Hello from the command line!
+
+            $ java Hello.java           # Java 11+: compile in memory and run in one step
+            Hello from the command line!
+
+            $ jshell                    # the interactive REPL
+            jshell> 2 + 3 * 4
+            $1 ==> 14
+            jshell> "Java".repeat(3)
+            $2 ==> "JavaJavaJava"
+            jshell> /exit
+          </script>
+        </section>
+
+        <section class="doc-section" id="sdk" data-title="The Android SDK">
+          <div class="sec-head"><h2><span class="sec-num">1.7</span>Tour of the Android SDK &amp; SDK Manager</h2></div>
+          <p>Open <b>Tools → SDK Manager</b>. Two tabs matter:</p>
+          <div class="grid grid-2">
+            <div class="glass card"><h4>SDK Platforms</h4><p class="small">One entry per Android version (API level), each containing <code>android.jar</code> — the APIs you compile against. Install the <b>latest stable API</b>; the final project uses <code>compileSdk = 36</code>.</p></div>
+            <div class="glass card"><h4>SDK Tools</h4><p class="small">Make sure these are installed: <b>Build-Tools</b>, <b>Platform-Tools</b> (<code>adb</code>), <b>Android Emulator</b> and <b>Command-line Tools (latest)</b>.</p></div>
+          </div>
+          <div class="filetree"><span class="d">Sdk/</span>
+├── <span class="d">build-tools/36.x.x/</span>     <span class="c"># aapt2, d8, apksigner, zipalign</span>
+├── <span class="d">cmdline-tools/latest/</span>   <span class="c"># sdkmanager, avdmanager</span>
+├── <span class="d">emulator/</span>               <span class="c"># the Android Emulator</span>
+├── <span class="d">platform-tools/</span>         <span class="c"># adb, fastboot</span>
+├── <span class="d">platforms/android-36/</span>   <span class="c"># android.jar for API 36</span>
+└── <span class="d">system-images/</span>          <span class="c"># emulator OS images</span></div>
+          <h3>Put <code>adb</code> on your PATH (optional, handy)</h3>
+          <div class="tabs" data-group="os">
+            <div class="tab-list"><button data-tab="win">🪟 Windows</button><button data-tab="mac">🍎 macOS</button><button data-tab="linux">🐧 Linux</button></div>
+            <div class="tab-panel" data-panel="win">
+              <script type="text/plain" data-code="powershell" data-file="PowerShell">
+                PS> [Environment]::SetEnvironmentVariable("ANDROID_HOME", "$env:LOCALAPPDATA\Android\Sdk", "User")
+                PS> $p = [Environment]::GetEnvironmentVariable("Path", "User")
+                PS> [Environment]::SetEnvironmentVariable("Path", "$p;$env:LOCALAPPDATA\Android\Sdk\platform-tools", "User")
+                PS> adb version     # in a NEW terminal
+              </script>
+            </div>
+            <div class="tab-panel" data-panel="mac">
+              <script type="text/plain" data-code="bash" data-file="~/.zshrc">
+                export ANDROID_HOME="$HOME/Library/Android/sdk"
+                export PATH="$PATH:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator"
+              </script>
+            </div>
+            <div class="tab-panel" data-panel="linux">
+              <script type="text/plain" data-code="bash" data-file="~/.bashrc">
+                export ANDROID_HOME="$HOME/Android/Sdk"
+                export PATH="$PATH:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator"
+              </script>
+            </div>
+          </div>
+          <div class="callout note">
+            <div class="ci">🧠</div>
+            <div><span class="ct">compileSdk vs minSdk vs targetSdk</span>
+              <dl class="kv">
+                <dt>compileSdk</dt><dd>Which <code>android.jar</code> you compile against — the newest APIs you can <em>call</em>.</dd>
+                <dt>minSdk</dt><dd>The oldest Android version that can install your app.</dd>
+                <dt>targetSdk</dt><dd>The version whose <em>behaviour</em> you've tested against. Google Play requires a recent value.</dd>
+              </dl>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="emulator" data-title="Create an emulator">
+          <div class="sec-head"><h2><span class="sec-num">1.8</span>Create an Android Virtual Device (emulator)</h2></div>
+          <ol class="steps">
+            <li><b>Open the Device Manager</b><b>View → Tool Windows → Device Manager</b>, then <b>+ → Create Virtual Device</b>.</li>
+            <li><b>Pick hardware</b>A phone profile such as <b>Pixel 8</b> or <b>Medium Phone</b>.</li>
+            <li><b>Pick a system image</b>The newest stable API with <b>Google APIs</b> or <b>Google Play</b>. ABI: <b>x86_64</b> on Intel/AMD, <b>arm64-v8a</b> on Apple Silicon.</li>
+            <li><b>Boot it</b>Press ▶ next to the device. The first boot takes a minute; later boots use a Quick Boot snapshot.</li>
+          </ol>
+          <script type="text/plain" data-code="bash" data-file="Terminal">
+            $ emulator -list-avds               # list created devices
+            $ emulator -avd Pixel_8_API_36      # boot one
+            $ adb devices                       # emulator-5554  device
+          </script>
+        </section>
+
+        <section class="doc-section" id="device" data-title="Use a real device">
+          <div class="sec-head"><h2><span class="sec-num">1.9</span>Run on a real Android device</h2></div>
+          <ol>
+            <li><b>Settings → About phone</b> → tap <b>Build number</b> seven times (“You are now a developer!”).</li>
+            <li><b>Settings → System → Developer options</b> → turn on <b>USB debugging</b>.</li>
+          </ol>
+          <div class="tabs" data-group="conn">
+            <div class="tab-list"><button data-tab="usb">🔌 USB cable</button><button data-tab="wifi">📶 Wi-Fi (Android 11+)</button></div>
+            <div class="tab-panel" data-panel="usb">
+              <ol>
+                <li>Use a <b>data</b> cable (some cheap cables only charge).</li>
+                <li>Accept <b>“Allow USB debugging?”</b> on the phone and tick <em>Always allow</em>.</li>
+                <li>Windows: install the <b>Google USB Driver</b> (SDK Manager → SDK Tools) or your phone maker's driver if the device doesn't appear.</li>
+              </ol>
+            </div>
+            <div class="tab-panel" data-panel="wifi">
+              <ol>
+                <li>Computer and phone on the <b>same Wi-Fi</b>; on the phone enable <b>Developer options → Wireless debugging</b>.</li>
+                <li>In Android Studio's device dropdown choose <b>Pair Devices Using Wi-Fi</b> and scan the QR code from the phone.</li>
+              </ol>
+            </div>
+          </div>
+          <script type="text/plain" data-code="bash" data-file="Terminal">
+            $ adb devices
+            List of devices attached
+            R5CT1234ABC	device
+          </script>
+          <p>If the state says <code>unauthorized</code>, unlock the phone and accept the debugging prompt.</p>
+        </section>
+
+        <section class="doc-section" id="first-app" data-title="Your first Android app in Java">
+          <div class="sec-head"><h2><span class="sec-num">1.10</span>Your first Android app in Java</h2></div>
+          <p>Let's prove the whole Android toolchain works end to end.</p>
+          <ol class="steps">
+            <li><b>New Project</b><b>File → New → New Project → Empty Views Activity</b>. (The plain “Empty Activity” template uses Jetpack Compose, which is Kotlin-only. <em>Views</em> templates let you choose Java.)</li>
+            <li><b>Configure</b>Name <code>HelloAndroid</code>, package <code>com.example.helloandroid</code>, <b>Language: Java</b>, Minimum SDK <b>API 26</b>, build configuration language <b>Kotlin DSL</b>.</li>
+            <li><b>Wait for Gradle sync</b>The first sync downloads Gradle and dependencies and can take several minutes.</li>
+            <li><b>Run</b>Pick your emulator or phone in the toolbar and press <b>▶ Run 'app'</b> (<kbd>Shift</kbd>+<kbd>F10</kbd> / <kbd>⌃</kbd>+<kbd>R</kbd>). You'll see “Hello World!”.</li>
+            <li><b>Change something</b>Edit <code>res/layout/activity_main.xml</code>, change the text, and press <b>Apply Changes</b> (⚡) or Run again.</li>
+          </ol>
+          <script type="text/plain" data-code="java" data-file="app/src/main/java/com/example/helloandroid/MainActivity.java" data-numbered>
+            package com.example.helloandroid;
+
+            import android.os.Bundle;
+            import androidx.appcompat.app.AppCompatActivity;
+
+            public class MainActivity extends AppCompatActivity {
+
+                @Override
+                protected void onCreate(Bundle savedInstanceState) {
+                    super.onCreate(savedInstanceState);          // let Android do its setup first
+                    setContentView(R.layout.activity_main);      //! inflate res/layout/activity_main.xml
+                }
+            }
+          </script>
+          <p>Don't worry about understanding this yet — lesson 17 dissects every file of an Android project and lesson 18 builds real screens.</p>
+        </section>
+
+        <section class="doc-section" id="productivity" data-title="IDE productivity">
+          <div class="sec-head"><h2><span class="sec-num">1.11</span>IDE productivity: shortcuts &amp; settings</h2></div>
+          <div class="table-wrap">
+            <table class="t">
+              <thead><tr><th>Action</th><th>Windows / Linux</th><th>macOS</th></tr></thead>
+              <tbody>
+                <tr><td>Search everywhere</td><td><kbd>Shift</kbd> <kbd>Shift</kbd></td><td><kbd>⇧</kbd> <kbd>⇧</kbd></td></tr>
+                <tr><td>Find any action / setting</td><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>A</kbd></td><td><kbd>⌘</kbd>+<kbd>⇧</kbd>+<kbd>A</kbd></td></tr>
+                <tr><td>Quick fix 💡</td><td><kbd>Alt</kbd>+<kbd>Enter</kbd></td><td><kbd>⌥</kbd>+<kbd>↩</kbd></td></tr>
+                <tr><td>Generate (constructor, getters, equals…)</td><td><kbd>Alt</kbd>+<kbd>Insert</kbd></td><td><kbd>⌘</kbd>+<kbd>N</kbd></td></tr>
+                <tr><td>Go to declaration</td><td><kbd>Ctrl</kbd>+<kbd>B</kbd></td><td><kbd>⌘</kbd>+<kbd>B</kbd></td></tr>
+                <tr><td>Rename everywhere</td><td><kbd>Shift</kbd>+<kbd>F6</kbd></td><td><kbd>⇧</kbd>+<kbd>F6</kbd></td></tr>
+                <tr><td>Reformat code</td><td><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>L</kbd></td><td><kbd>⌘</kbd>+<kbd>⌥</kbd>+<kbd>L</kbd></td></tr>
+                <tr><td>Run current file</td><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>F10</kbd></td><td><kbd>⌃</kbd>+<kbd>⇧</kbd>+<kbd>R</kbd></td></tr>
+                <tr><td>Debug</td><td><kbd>Shift</kbd>+<kbd>F9</kbd></td><td><kbd>⌃</kbd>+<kbd>D</kbd></td></tr>
+                <tr><td>Live templates: <code>psvm</code>, <code>sout</code>, <code>fori</code></td><td>type + <kbd>Tab</kbd></td><td>type + <kbd>⇥</kbd></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="callout tip">
+            <div class="ci">⌨️</div>
+            <div><span class="ct">Live templates save hundreds of keystrokes</span>
+              <p>In a class body type <code>psvm</code> + <kbd>Tab</kbd> → <code>public static void main(String[] args) {}</code>. Inside a method, <code>sout</code> + <kbd>Tab</kbd> → <code>System.out.println();</code>, <code>fori</code> → a counting loop, <code>iter</code> → a for-each loop.</p>
+            </div>
+          </div>
+          <h3>Recommended settings</h3>
+          <ul>
+            <li><b>Settings → Editor → General → Auto Import</b>: tick <em>Add unambiguous imports on the fly</em> and <em>Optimize imports on the fly</em>.</li>
+            <li><b>Settings → Editor → Inlay Hints → Java</b>: enable parameter-name and type hints for <code>var</code> — a superb learning aid.</li>
+            <li><b>Settings → Tools → Actions on Save</b>: enable <em>Reformat code</em> and <em>Optimize imports</em>.</li>
+          </ul>
+        </section>
+
+        <section class="doc-section" id="troubleshooting" data-title="Troubleshooting">
+          <div class="sec-head"><h2><span class="sec-num">1.12</span>Troubleshooting common setup errors</h2></div>
+          <div class="table-wrap">
+            <table class="t">
+              <thead><tr><th>Symptom</th><th>Likely cause</th><th>Fix</th></tr></thead>
+              <tbody>
+                <tr><td><em>'java' is not recognized</em> / <em>command not found</em></td><td>JDK not on PATH</td><td>Section 1.4; open a <b>new</b> terminal afterwards.</td></tr>
+                <tr><td><em>error: invalid source release: 21</em></td><td>Gradle runs on an older JDK</td><td><b>Settings → Build Tools → Gradle → Gradle JDK</b> → <em>jbr-21</em>.</td></tr>
+                <tr><td><em>Could not find or load main class</em></td><td>Wrong class name, or the <code>package</code> line doesn't match the folder</td><td>Run from the gutter ▶; check the package declaration.</td></tr>
+                <tr><td><em>Gradle sync failed: Could not resolve …</em></td><td>No internet, proxy or firewall</td><td>Check <b>Settings → HTTP Proxy</b>, then <b>File → Sync Project with Gradle Files</b>.</td></tr>
+                <tr><td><em>SDK location not found</em></td><td><code>local.properties</code> missing</td><td>Open the project from Android Studio (it writes the file).</td></tr>
+                <tr><td>Emulator: <em>requires hardware acceleration</em></td><td>Virtualization disabled</td><td>Section 1.2.</td></tr>
+                <tr><td><code>adb devices</code> shows nothing</td><td>Charge-only cable, missing driver</td><td>Try another cable/port; install the OEM driver.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="callout tip">
+            <div class="ci">🩺</div>
+            <div><span class="ct">The universal fix list</span>
+              <p><b>1.</b> Sync Project with Gradle Files → <b>2.</b> Build → Clean Project → <b>3.</b> File → Invalidate Caches → Restart → <b>4.</b> delete <code>.gradle/</code> and <code>build/</code> → <b>5.</b> read the <em>first</em> error in the Build window.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="exercises" data-title="Exercises">
+          <div class="sec-head"><h2><span class="sec-num">1.13</span>Exercises</h2></div>
+          <details class="exercise">
+            <summary>Exercise 1 — Environment checklist <span class="badge green">Easy</span></summary>
+            <div class="ex-body">
+              <p>In a new terminal run <code>java -version</code>, <code>javac -version</code> and <code>adb version</code>. In Android Studio open <b>Help → About</b>. Write down every version.</p>
+              <p class="muted small">If a command is “not recognized”, revisit the PATH steps and open a <em>new</em> terminal.</p>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 2 — Two programs, one module <span class="badge blue">Medium</span></summary>
+            <div class="ex-body">
+              <p>In the <code>lessons</code> module create a package <code>l01</code> with two classes, <code>Ping</code> and <code>Pong</code>, each with a <code>main</code> that prints its own name. Run both, then find both entries in the run-configuration dropdown in the toolbar.</p>
+              <script type="text/plain" data-code="java" data-file="Solution — Ping.java" data-run>
+                public class Ping {
+                    public static void main(String[] args) {
+                        System.out.println("Ping!");
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output>
+                Ping!
+              </script>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 3 — Build an APK by hand <span class="badge amber">Challenge</span></summary>
+            <div class="ex-body">
+              <p>In <em>HelloAndroid</em>, open the Terminal tool window, build a debug APK with the Gradle wrapper and install it with <code>adb</code>.</p>
+              <script type="text/plain" data-code="bash" data-file="Solution">
+                $ ./gradlew assembleDebug          # Windows: gradlew.bat assembleDebug
+                BUILD SUCCESSFUL in 41s
+                $ adb install -r app/build/outputs/apk/debug/app-debug.apk
+                Success
+              </script>
+            </div>
+          </details>
+        </section>
+
+        <section class="doc-section" id="quiz" data-title="Quiz">
+          <div class="sec-head"><h2><span class="sec-num">1.14</span>Quiz</h2></div>
+          <script type="application/json" data-quiz>
+          [
+            {"q": "Do you need to install a separate JDK to write Java in Android Studio?", "options": ["Yes, Android Studio refuses to start without one", "No — Android Studio bundles the JetBrains Runtime (a JDK 21 build) and Gradle uses it", "No, because Android apps don't use Java", "Only on macOS"], "answer": 1, "explain": "The bundled JBR is a full JDK. A standalone JDK is optional — handy for using `java` in any terminal."},
+            {"q": "Which tool turns `Hello.java` into `Hello.class`?", "options": ["`java`", "`javac`", "`jshell`", "`adb`"], "answer": 1, "explain": "`javac` compiles source to bytecode; `java` runs bytecode on the JVM (or, since Java 11, can compile-and-run a single source file)."},
+            {"q": "Which Android Studio module type should hold plain Java programs with `main` methods?", "options": ["Phone & Tablet module", "Java or Kotlin Library module", "Wear OS module", "Baseline Profile module"], "answer": 1, "explain": "A Java library module uses Gradle's `java-library` plugin — no Android framework, just the JDK — so its classes can run directly on the JVM."},
+            {"q": "Why must you choose an *Empty Views Activity* template for a Java app?", "options": ["Views templates are faster", "The default Empty Activity template uses Jetpack Compose, which requires Kotlin", "Java can't use XML", "Views are deprecated"], "answer": 1, "explain": "Compose is a Kotlin compiler plugin. Android's View system works great from Java and is what lessons 17–22 use."},
+            {"q": "What does `minSdk` control?", "options": ["Which APIs you compile against", "The oldest Android version that can install the app", "The Java version", "The emulator's RAM"], "answer": 1, "explain": "`compileSdk` = APIs you can call, `minSdk` = oldest supported device, `targetSdk` = behaviour you've tested against."}
+          ]
+          </script>
+        </section>
+
+        <section class="doc-section" id="references" data-title="Further reading">
+          <div class="sec-head"><h2><span class="sec-num">1.15</span>Further reading</h2></div>
+          <ul>
+            <li><a href="https://developer.android.com/studio/install" target="_blank" rel="noopener">Install Android Studio (official)</a></li>
+            <li><a href="https://developer.android.com/studio/intro/studio-config#jdk" target="_blank" rel="noopener">Configure the JDK used by Android Studio</a></li>
+            <li><a href="https://developer.android.com/studio/run/managing-avds" target="_blank" rel="noopener">Create and manage virtual devices</a></li>
+            <li><a href="https://developer.android.com/studio/run/device" target="_blank" rel="noopener">Run apps on a hardware device</a></li>
+            <li><a href="https://dev.java/learn/getting-started/" target="_blank" rel="noopener">dev.java — Getting started with Java</a></li>
+          </ul>
+        </section>
+
+        <div id="pager"></div>
+      </div>
+    </main>
+  </div>
+  <div id="site-footer"></div>
+  <script src="assets/js/core.js?v=__BUILD__"></script>
+</body>
+</html>

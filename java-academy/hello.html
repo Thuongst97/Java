@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hello, Java! — Java Academy</title>
+  <meta name="description" content="Write and run your first Java program, understand how Java is compiled for the JVM and Android, read input and fix compiler errors.">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="assets/css/main.css?v=__BUILD__">
+  <script>try{var t=localStorage.getItem("ja-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body data-page="hello">
+  <div id="site-header"></div>
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+      <div class="content-inner">
+
+        <header class="page-hero">
+          <nav class="crumbs"><a href="index.html">Home</a><span>/</span><span>Getting Started</span><span>/</span><span>Lesson 02</span></nav>
+          <div class="eyebrow">Lesson 02 · Getting Started</div>
+          <h1>Hello, Java!</h1>
+          <p class="lead">Write your first program, take it apart line by line, and see what really happens between pressing ▶ and seeing text on the screen — on the JVM and on Android.</p>
+          <div class="page-meta"><span>⏱ 35 min</span><span>🎯 Beginner</span><span>🧩 Prerequisite: lesson 01 (or just a browser)</span></div>
+          <div class="objectives">
+            <h4>You will be able to</h4>
+            <ul>
+              <li>Write and run a Java program with <code>main</code></li>
+              <li>Print with <code>println</code>, <code>print</code> and <code>printf</code></li>
+              <li>Write comments and Javadoc</li>
+              <li>Read keyboard input with <code>Scanner</code></li>
+              <li>Explain how Java runs on the JVM and on Android</li>
+              <li>Read and fix compiler errors</li>
+            </ul>
+          </div>
+        </header>
+
+        <section class="doc-section" id="first-program" data-title="Your first program">
+          <div class="sec-head"><h2><span class="sec-num">2.1</span>Your first program</h2></div>
+          <p>Every Java application starts at a method called <code>main</code>, which lives inside a <b>class</b>. Press <b>▶ Run</b> to execute it right here — then change the text and run it again (<kbd>Ctrl</kbd>+<kbd>Enter</kbd> works inside the editor).</p>
+          <script type="text/plain" data-code="java" data-file="Hello.java" data-run>
+            public class Hello {
+                public static void main(String[] args) {
+                    System.out.println("Hello, Java!");
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            Hello, Java!
+          </script>
+          <p>Five lines, and every word matters:</p>
+          <dl class="kv">
+            <dt><code>public class Hello</code></dt><dd>Declares a <b>class</b> named <code>Hello</code>. In Java <em>all</em> code lives inside classes. A <code>public</code> class must be saved in a file with the same name: <code>Hello.java</code>.</dd>
+            <dt><code>public static void main(String[] args)</code></dt><dd>The <b>entry point</b> the JVM looks for. <code>public</code>: callable from outside. <code>static</code>: belongs to the class, so no object is needed. <code>void</code>: returns nothing. <code>String[] args</code>: the command-line arguments.</dd>
+            <dt><code>{ … }</code></dt><dd>Curly braces delimit the class body and the method body.</dd>
+            <dt><code>System.out.println("…");</code></dt><dd>Prints text followed by a line break. <code>System</code> is a class from the standard library, <code>out</code> is its standard-output stream. Text in double quotes is a <b>String</b>. Every statement ends with a semicolon <code>;</code>.</dd>
+          </dl>
+          <div class="callout tip">
+            <div class="ci">⌨️</div>
+            <div><span class="ct">In Android Studio</span>
+              <p>Inside your <code>lessons</code> module: <b>New → Java Class</b> → <code>Hello</code>, then type <code>psvm</code> <kbd>Tab</kbd> and <code>sout</code> <kbd>Tab</kbd>. Click the gutter ▶. Java is <b>case-sensitive</b>: <code>system.out.PrintLn</code> will not compile.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="anatomy" data-title="Statements, printing & comments">
+          <div class="sec-head"><h2><span class="sec-num">2.2</span>Statements, printing &amp; comments</h2></div>
+          <p>A method body is a list of <b>statements</b> executed top to bottom. Each ends with <code>;</code>. Whitespace and line breaks are ignored by the compiler — indentation is for humans.</p>
+          <script type="text/plain" data-code="java" data-file="Printing.java" data-run>
+            /*
+             * A block comment can span several lines.
+             */
+            public class Printing {
+                public static void main(String[] args) {
+                    // A line comment: the compiler ignores everything after //
+                    System.out.print("Java ");          // print: no line break
+                    System.out.print("is ");
+                    System.out.println("fun.");         // println: adds a line break
+                    System.out.println();               // an empty line
+                    System.out.println(40 + 2);         // any value can be printed
+                    System.out.println("2 + 2 = " + (2 + 2)); // + joins text and values
+                    System.out.printf("%s has %d letters%n", "Java", 4); // formatted output
+                    System.out.println("Tab:\t| Quote: \" | Backslash: \\");
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            Java is fun.
+
+            42
+            2 + 2 = 4
+            Java has 4 letters
+            Tab:	| Quote: " | Backslash: \
+          </script>
+          <div class="table-wrap">
+            <table class="t">
+              <thead><tr><th>Escape</th><th>Meaning</th><th><code>printf</code> format</th><th>Meaning</th></tr></thead>
+              <tbody>
+                <tr><td><code>\n</code></td><td>new line</td><td><code>%s</code></td><td>any value as text</td></tr>
+                <tr><td><code>\t</code></td><td>tab</td><td><code>%d</code></td><td>whole number</td></tr>
+                <tr><td><code>\"</code></td><td>double quote</td><td><code>%.2f</code></td><td>decimal, 2 places</td></tr>
+                <tr><td><code>\\</code></td><td>backslash</td><td><code>%n</code></td><td>platform line break</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <h3>Documentation comments (Javadoc)</h3>
+          <p>Comments starting with <code>/**</code> are <b>Javadoc</b>. Android Studio shows them when you hover over a method (<kbd>Ctrl</kbd>+<kbd>Q</kbd> / <kbd>F1</kbd>), and the <code>javadoc</code> tool turns them into the HTML API docs you'll read every day.</p>
+          <script type="text/plain" data-code="java" data-file="Greeter.java">
+            public class Greeter {
+                /**
+                 * Builds a friendly greeting.
+                 *
+                 * @param name the person to greet; must not be blank
+                 * @return a greeting such as {@code "Hello, Ada!"}
+                 */
+                public static String greet(String name) {
+                    return "Hello, " + name + "!";
+                }
+            }
+          </script>
+        </section>
+
+        <section class="doc-section" id="args" data-title="main with arguments">
+          <div class="sec-head"><h2><span class="sec-num">2.3</span>Command-line arguments</h2></div>
+          <p>The <code>args</code> array holds whatever words follow the class name on the command line:</p>
+          <script type="text/plain" data-code="java" data-file="Args.java">
+            public class Args {
+                public static void main(String[] args) {
+                    System.out.println("You passed " + args.length + " argument(s)");
+                    for (String arg : args) {
+                        System.out.println("- " + arg);
+                    }
+                }
+            }
+          </script>
+          <script type="text/plain" data-code="bash" data-file="Terminal">
+            $ java Args.java red green
+            You passed 2 argument(s)
+            - red
+            - green
+          </script>
+          <p class="small muted">In Android Studio: <b>Run → Edit Configurations… → Program arguments</b>.</p>
+        </section>
+
+        <section class="doc-section" id="input" data-title="Reading input">
+          <div class="sec-head"><h2><span class="sec-num">2.4</span>Reading keyboard input with <code>Scanner</code></h2></div>
+          <p><code>java.util.Scanner</code> reads text from <code>System.in</code> (the keyboard). The <code>import</code> line at the top tells the compiler where to find it. On this site, type input in the <b>Input (stdin)</b> box that appears after you press ▶ Run.</p>
+          <script type="text/plain" data-code="java" data-file="Age.java" data-run data-stdin="Ada\n36">
+            import java.util.Scanner;
+
+            public class Age {
+                public static void main(String[] args) {
+                    Scanner in = new Scanner(System.in);
+                    System.out.print("What's your name? ");
+                    String name = in.nextLine();
+                    System.out.print("How old are you? ");
+                    int age = in.nextInt();
+                    System.out.println();
+                    System.out.println("Hi " + name + "! Next year you'll be " + (age + 1) + ".");
+                }
+            }
+          </script>
+          <script type="text/plain" data-output="Output with input Ada / 36">
+            What's your name? How old are you? 
+            Hi Ada! Next year you'll be 37.
+          </script>
+          <p class="small muted">In a real terminal or Android Studio's Run window you type the answers after each question, so they appear on the same line. Here the input comes from the box, which is why the questions run together.</p>
+          <div class="callout warn">
+            <div class="ci">⚠️</div>
+            <div><span class="ct">What if the user types “abc”?</span>
+              <p><code>nextInt()</code> throws an <code>InputMismatchException</code> and the program crashes. Lesson 10 shows how to catch exceptions; lesson 06 shows <code>Integer.parseInt</code>. Another classic trap: after <code>nextInt()</code> the line break is still waiting, so a following <code>nextLine()</code> returns an empty string. Reading every line with <code>nextLine()</code> and converting it yourself avoids that.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="compilation" data-title="How Java runs">
+          <div class="sec-head"><h2><span class="sec-num">2.5</span>What happens when you press ▶</h2></div>
+          <p>Java is <b>compiled</b> and <b>statically typed</b>: the compiler checks the whole program for type errors <em>before</em> it runs, then produces portable <b>bytecode</b> — “write once, run anywhere”.</p>
+          <figure class="diagram">
+            <svg viewBox="0 0 760 250" width="760" role="img" aria-label="Java compilation pipeline to the JVM and Android">
+              <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#f89820"/></marker></defs>
+              <g font-family="Inter, sans-serif" font-size="13" text-anchor="middle">
+                <rect x="10" y="95" width="120" height="56" rx="10" fill="rgba(248,152,32,.15)" stroke="#f89820"/>
+                <text x="70" y="119" fill="currentColor" font-weight="700">Hello.java</text><text x="70" y="138" fill="#9a98a8" font-size="11">source code</text>
+                <rect x="170" y="95" width="140" height="56" rx="10" fill="rgba(255,107,122,.13)" stroke="#ff6b7a"/>
+                <text x="240" y="119" fill="currentColor" font-weight="700">javac</text><text x="240" y="138" fill="#9a98a8" font-size="11">parse · check types</text>
+                <rect x="350" y="30" width="150" height="56" rx="10" fill="rgba(108,184,255,.13)" stroke="#6cb8ff"/>
+                <text x="425" y="54" fill="currentColor" font-weight="700">Hello.class</text><text x="425" y="73" fill="#9a98a8" font-size="11">JVM bytecode</text>
+                <rect x="560" y="30" width="190" height="56" rx="10" fill="rgba(108,184,255,.13)" stroke="#6cb8ff"/>
+                <text x="655" y="54" fill="currentColor" font-weight="700">JVM (desktop/server)</text><text x="655" y="73" fill="#9a98a8" font-size="11">interpreter + JIT compiler</text>
+                <rect x="350" y="160" width="150" height="56" rx="10" fill="rgba(61,220,132,.13)" stroke="#3ddc84"/>
+                <text x="425" y="184" fill="currentColor" font-weight="700">D8 → classes.dex</text><text x="425" y="203" fill="#9a98a8" font-size="11">Dalvik bytecode, in APK</text>
+                <rect x="560" y="160" width="190" height="56" rx="10" fill="rgba(61,220,132,.13)" stroke="#3ddc84"/>
+                <text x="655" y="184" fill="currentColor" font-weight="700">ART on Android</text><text x="655" y="203" fill="#9a98a8" font-size="11">JIT + AOT compiled</text>
+                <path d="M130 123H166" stroke="#f89820" stroke-width="2" marker-end="url(#ar)"/>
+                <path d="M310 115L346 64" stroke="#f89820" stroke-width="2" marker-end="url(#ar)"/>
+                <path d="M500 58H556" stroke="#f89820" stroke-width="2" marker-end="url(#ar)"/>
+                <path d="M425 86V156" stroke="#f89820" stroke-width="2" stroke-dasharray="4 4" marker-end="url(#ar)"/>
+                <path d="M500 188H556" stroke="#f89820" stroke-width="2" marker-end="url(#ar)"/>
+                <text x="465" y="125" fill="#9a98a8" font-size="11">Android build</text>
+              </g>
+            </svg>
+            <figcaption>On a computer the JVM runs the bytecode directly. In an Android build, D8 converts it to DEX and the Android Runtime (ART) executes it.</figcaption>
+          </figure>
+          <ul>
+            <li><b>javac</b> reports every type error at compile time — an entire class of bugs never reaches your users.</li>
+            <li>The <b>JVM</b> starts by interpreting bytecode, measures which methods are “hot”, and compiles those to optimised machine code (the <b>JIT</b>, just-in-time compiler). That's why Java is fast.</li>
+            <li>On <b>Android</b>, the same Java source is compiled by <code>javac</code>, converted to DEX by <b>D8</b>, shrunk by <b>R8</b> in release builds, and run by <b>ART</b>. Android implements most of the <code>java.*</code> standard library, so almost everything you learn in lessons 02–16 works on a phone.</li>
+          </ul>
+          <div class="callout note">
+            <div class="ci">🔍</div>
+            <div><span class="ct">See the bytecode yourself</span>
+              <p>After compiling, run <code>javap -c Hello</code>. You'll see instructions such as <code>getstatic java/lang/System.out</code>, <code>ldc "Hello, Java!"</code> and <code>invokevirtual println</code> — the JVM's “assembly language”. In Android Studio, <b>View → Show Bytecode</b> does the same for the open file.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="ways" data-title="Ways to run Java">
+          <div class="sec-head"><h2><span class="sec-num">2.6</span>Four ways to run Java</h2></div>
+          <div class="table-wrap">
+            <table class="t">
+              <thead><tr><th>Way</th><th>Best for</th><th>How</th></tr></thead>
+              <tbody>
+                <tr><td>🤖 Android Studio</td><td>Everything in this course</td><td>Gutter ▶ next to <code>main</code>, or <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>F10</kbd> / <kbd>⌃</kbd>+<kbd>⇧</kbd>+<kbd>R</kbd></td></tr>
+                <tr><td>🌐 ▶ Run on this site</td><td>Quick experiments</td><td>Edit any runnable example and press ▶ Run</td></tr>
+                <tr><td>⌨️ Source launcher</td><td>Single-file programs &amp; scripts</td><td><code>java Hello.java</code> — compiles in memory and runs</td></tr>
+                <tr><td>🧪 JShell</td><td>Trying one expression or API call</td><td><code>jshell</code>, then type Java; <b>Tools → JShell Console</b> in the IDE</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="callout java">
+            <div class="ci">🆕</div>
+            <div><span class="ct">Modern Java: less ceremony (Java 25+)</span>
+              <p>Java 25 finalised <b>compact source files</b> and <b>instance main methods</b>, so a beginner's program can be just:</p>
+              <script type="text/plain" data-code="java" data-file="Hello.java (Java 25+)">
+                void main() {
+                    IO.println("Hello, Java!");
+                }
+              </script>
+              <p>This course uses the classic form because it works on every JDK from 8 to today, on Android, and in every tutorial, book and codebase you'll meet. Once you understand classes and <code>static</code> (lesson 07), the short form is just sugar.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="errors" data-title="Reading compiler errors">
+          <div class="sec-head"><h2><span class="sec-num">2.7</span>Reading compiler errors</h2></div>
+          <p>Errors are the compiler helping you. Each one says <b>where</b> (<code>file:line</code>, plus a <code>^</code> under the exact spot) and <b>what</b>. This file has four mistakes:</p>
+          <script type="text/plain" data-code="java" data-file="Broken.java" data-numbered>
+            public class Broken {
+                public static void main(String[] args) {
+                    System.out.printn("Hi");          // typo
+                    int year = "2025";                // wrong type
+                    System.out.println(score)         // undeclared variable, missing ;
+                }
+            }
+          </script>
+          <script type="text/plain" data-output="javac — first attempt">
+            Broken.java:5: error: ';' expected
+                    System.out.println(score)
+                                             ^
+            1 error
+          </script>
+          <p>Only one error? javac works in phases: it must first <b>parse</b> the file (syntax), and only if that succeeds does it check <b>meaning</b> (names and types). Add the semicolon and compile again:</p>
+          <script type="text/plain" data-output="javac — second attempt">
+            Broken.java:3: error: cannot find symbol
+                    System.out.printn("Hi");
+                              ^
+              symbol:   method printn(String)
+              location: variable out of type PrintStream
+            Broken.java:4: error: incompatible types: String cannot be converted to int
+                    int year = "2025";
+                               ^
+            Broken.java:5: error: cannot find symbol
+                    System.out.println(score);
+                                       ^
+              symbol:   variable score
+              location: class Broken
+            3 errors
+          </script>
+          <ul>
+            <li><b>cannot find symbol</b> — a typo, a missing <code>import</code>, or a variable declared later / in another scope.</li>
+            <li><b>incompatible types</b> — <code>"2025"</code> is a <code>String</code>; <code>2025</code> is an <code>int</code>.</li>
+            <li><b>';' expected</b>, <b>reached end of file while parsing</b> — punctuation: a missing semicolon or closing brace.</li>
+            <li>Fix errors <b>from the top down</b>: one mistake often causes follow-up errors.</li>
+          </ul>
+          <div class="callout tip">
+            <div class="ci">💡</div>
+            <div><span class="ct">Let the IDE fix it</span>
+              <p>Android Studio underlines errors in red as you type. Put the caret on one and press <kbd>Alt</kbd>+<kbd>Enter</kbd> (<kbd>⌥</kbd>+<kbd>↩</kbd>): it offers to import a class, create a missing variable, or fix a type.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="why-java" data-title="Why Java?">
+          <div class="sec-head"><h2><span class="sec-num">2.8</span>Why Java?</h2></div>
+          <p>Java was released by Sun Microsystems in 1995 and is now stewarded by Oracle and the open-source <b>OpenJDK</b> community, with a new release every six months and a long-term-support (LTS) release every two years (17, 21, 25…).</p>
+          <div class="grid grid-2">
+            <div class="glass card"><h4 class="c-primary">Everywhere</h4><p class="small">Android apps, banking and e-commerce back ends (Spring), big-data tools (Kafka, Spark, Elasticsearch), Minecraft, IDEs — billions of devices run Java bytecode.</p></div>
+            <div class="glass card"><h4 class="c-green">Safe &amp; readable</h4><p class="small">Static types, no manual memory management (the garbage collector frees memory for you), and explicit code that stays readable in huge teams.</p></div>
+            <div class="glass card"><h4 class="c-blue">A huge ecosystem</h4><p class="small">Maven Central hosts hundreds of thousands of libraries. Whatever you need — JSON, HTTP, databases, testing — it already exists.</p></div>
+            <div class="glass card"><h4 class="c-orange">The JVM foundation</h4><p class="small">Kotlin, Scala and Groovy all compile to the same bytecode. Knowing Java means understanding the platform under all of them — including Kotlin on Android.</p></div>
+          </div>
+          <div class="callout note">
+            <div class="ci">🤖</div>
+            <div><span class="ct">Java and Kotlin on Android</span>
+              <p>Google calls Android “Kotlin-first”, but Java is fully supported: the framework itself is written in Java, the Android SDK and every AndroidX library work from Java, and Java and Kotlin can live in the same project and call each other freely. Many production apps are mostly Java. What you learn here transfers directly.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="exercises" data-title="Exercises">
+          <div class="sec-head"><h2><span class="sec-num">2.9</span>Exercises</h2></div>
+          <details class="exercise">
+            <summary>Exercise 1 — Business card <span class="badge green">Easy</span></summary>
+            <div class="ex-body">
+              <p>Print a three-line business card with your name, your role and a favourite quote, surrounded by a border of <code>*</code> characters.</p>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run>
+                public class Card {
+                    public static void main(String[] args) {
+                        System.out.println("******************************");
+                        System.out.println("* Ada Lovelace               *");
+                        System.out.println("* Java Developer             *");
+                        System.out.println("* \"Talk is cheap.\"           *");
+                        System.out.println("******************************");
+                    }
+                }
+              </script>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 2 — Fix the program <span class="badge blue">Medium</span></summary>
+            <div class="ex-body">
+              <p>This program has four errors. Find them without running it, then verify.</p>
+              <script type="text/plain" data-code="java" data-file="Task">
+                public class Fixme {
+                    public static void main(String args) {
+                        System.out.println("Sum: " + 1 + 2)
+                        System.Out.println("Done");
+                        int total = "3";
+                    }
+                }
+              </script>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run>
+                public class Fixme {
+                    public static void main(String[] args) {        // 1. args is an array: String[]
+                        System.out.println("Sum: " + (1 + 2));      // 2. missing ;  (bonus: without () it printed "Sum: 12")
+                        System.out.println("Done");                 // 3. out, not Out — Java is case-sensitive
+                        int total = 3;                              // 4. an int, not a String
+                        System.out.println(total);
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output>
+                Sum: 3
+                Done
+                3
+              </script>
+              <p class="small muted">Mistake 1 compiles but the JVM refuses to start: <em>“main method not found”</em> — the signature must be exactly <code>main(String[])</code>.</p>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 3 — Interactive calculator <span class="badge amber">Challenge</span></summary>
+            <div class="ex-body">
+              <p>Ask for two whole numbers and print their sum, difference, product and integer quotient. Use <code>printf</code>.</p>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run data-stdin="17\n5">
+                import java.util.Scanner;
+
+                public class Calculator {
+                    public static void main(String[] args) {
+                        Scanner in = new Scanner(System.in);
+                        System.out.print("First number: ");
+                        int a = in.nextInt();
+                        System.out.print("Second number: ");
+                        int b = in.nextInt();
+                        System.out.println();
+                        System.out.printf("%d + %d = %d%n", a, b, a + b);
+                        System.out.printf("%d - %d = %d%n", a, b, a - b);
+                        System.out.printf("%d * %d = %d%n", a, b, a * b);
+                        System.out.printf("%d / %d = %d%n", a, b, a / b);   // crashes if b == 0 — lesson 10
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output="Output with input 17 / 5">
+                First number: Second number: 
+                17 + 5 = 22
+                17 - 5 = 12
+                17 * 5 = 85
+                17 / 5 = 3
+              </script>
+            </div>
+          </details>
+        </section>
+
+        <section class="doc-section" id="quiz" data-title="Quiz">
+          <div class="sec-head"><h2><span class="sec-num">2.10</span>Quiz</h2></div>
+          <script type="application/json" data-quiz>
+          [
+            {"q": "What must a file containing `public class Invoice` be called?", "options": ["Anything ending in .java", "`invoice.java`", "`Invoice.java`", "`Invoice.class`"], "answer": 2, "explain": "A public top-level class must live in a file with exactly the same name (case-sensitive) plus `.java`. The compiler produces `Invoice.class`."},
+            {"q": "What does this print?", "code": "System.out.print(\"A\");\nSystem.out.println(\"B\");\nSystem.out.print(\"C\");", "options": ["A, B and C on three lines", "`AB` then `C` on the next line", "`ABC`", "`A` then `BC`"], "answer": 1, "explain": "`print` doesn't add a line break; `println` does. So A and B share a line and C starts the next one."},
+            {"q": "What is `\"Total: \" + 1 + 2`?", "options": ["`Total: 3`", "`Total: 12`", "A compile error", "`3`"], "answer": 1, "explain": "`+` is evaluated left to right. Once the left side is a String, `+` means concatenation: \"Total: 1\" then \"Total: 12\". Use parentheses: `\"Total: \" + (1 + 2)`."},
+            {"q": "On Android, what finally executes your Java code?", "options": ["The desktop JVM", "A Java interpreter inside the APK", "ART, after D8 converts the bytecode to DEX", "The browser"], "answer": 2, "explain": "javac → .class → D8 → classes.dex → ART (with JIT and ahead-of-time compilation)."},
+            {"q": "javac reports only `';' expected` although the file has other mistakes. Why?", "options": ["javac stops after one error", "Syntax is checked first; type and name errors are reported once the file parses", "The other mistakes are fine", "Semicolons are optional in Java 21"], "answer": 1, "explain": "If the file can't be parsed, the compiler can't analyse names and types yet. Fix the syntax error and the remaining errors appear."}
+          ]
+          </script>
+        </section>
+
+        <section class="doc-section" id="references" data-title="Further reading">
+          <div class="sec-head"><h2><span class="sec-num">2.11</span>Further reading</h2></div>
+          <ul>
+            <li><a href="https://dev.java/learn/getting-started/" target="_blank" rel="noopener">dev.java — Getting started</a></li>
+            <li><a href="https://dev.java/learn/jshell-tool/" target="_blank" rel="noopener">dev.java — JShell</a></li>
+            <li><a href="https://openjdk.org/jeps/512" target="_blank" rel="noopener">JEP 512 — Compact source files and instance main methods</a></li>
+            <li><a href="https://developer.android.com/build/jdks" target="_blank" rel="noopener">Java versions in Android builds</a></li>
+          </ul>
+        </section>
+
+        <div id="pager"></div>
+      </div>
+    </main>
+  </div>
+  <div id="site-footer"></div>
+  <script src="assets/js/core.js?v=__BUILD__"></script>
+</body>
+</html>

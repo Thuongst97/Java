@@ -1,0 +1,29 @@
+name: Check lesson code examples
+
+on:
+  push:
+    paths:
+      - "java-academy/**"
+      - "tools/**"
+      - "final-project/**"
+      - ".github/workflows/check-snippets.yml"
+  pull_request:
+    paths:
+      - "java-academy/**"
+      - "tools/**"
+      - "final-project/**"
+  workflow_dispatch:
+
+jobs:
+  snippets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Final-project page shows the current Spendly source
+        run: python3 tools/embed_sources.py --check
+      - name: Compile and run every runnable example
+        run: python3 tools/check_snippets.py
