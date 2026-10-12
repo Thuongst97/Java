@@ -1,0 +1,503 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Testing, Reflection, JVM &amp; Design Patterns — Java Academy</title>
+  <meta name="description" content="JUnit 5 testing in Android Studio, testable design with fakes, annotations and reflection, JVM memory and garbage collection, and design patterns used on Android.">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="assets/css/main.css?v=__BUILD__">
+  <script>try{var t=localStorage.getItem("ja-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body data-page="advanced">
+  <div id="site-header"></div>
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+      <div class="content-inner">
+
+        <header class="page-hero">
+          <nav class="crumbs"><a href="index.html">Home</a><span>/</span><span>Advanced Java</span><span>/</span><span>Lesson 16</span></nav>
+          <div class="eyebrow">Lesson 16 · Advanced Java</div>
+          <h1>Testing, Reflection, JVM &amp; Design Patterns</h1>
+          <p class="lead">The skills that separate “it works on my machine” from professional code: automated tests, how frameworks use annotations and reflection, what the JVM does with your memory, and the design patterns you'll recognise all over the Android SDK.</p>
+          <div class="page-meta"><span>⏱ 70 min</span><span>🎯 Master</span><span>🧩 Prerequisite: lessons 07–15</span></div>
+          <div class="objectives">
+            <h4>You will be able to</h4>
+            <ul>
+              <li>Write JUnit 5 tests in Android Studio</li>
+              <li>Design code that is easy to test with fakes</li>
+              <li>Create and read custom annotations</li>
+              <li>Explain stack, heap, GC and the JIT</li>
+              <li>Apply Singleton, Factory, Strategy, Observer, Adapter</li>
+              <li>Review code against an expert checklist</li>
+            </ul>
+          </div>
+        </header>
+
+        <section class="doc-section" id="junit" data-title="Unit testing with JUnit">
+          <div class="sec-head"><h2><span class="sec-num">16.1</span>Unit testing with JUnit 5</h2></div>
+          <p>A <b>unit test</b> is code that calls your code and checks the result. Run them on every change and you'll catch regressions in seconds, not in production. Add JUnit 5 to the <code>lessons</code> module:</p>
+          <script type="text/plain" data-code="kts" data-file="lessons/build.gradle.kts">
+            dependencies {
+                testImplementation(platform("org.junit:junit-bom:5.11.4"))
+                testImplementation("org.junit.jupiter:junit-jupiter")
+                testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+            }
+
+            tasks.test {
+                useJUnitPlatform()          // run JUnit 5 ("Jupiter") tests
+            }
+          </script>
+          <p>Tests live in <code>src/test/java</code>, mirroring the package of the class under test. Put the caret on a class name and press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>T</kbd> (<kbd>⌘</kbd>+<kbd>⇧</kbd>+<kbd>T</kbd>) → <b>Create New Test…</b>.</p>
+          <script type="text/plain" data-code="java" data-file="lessons/src/test/java/com/example/lessons/l16/PriceCalculatorTest.java" data-numbered>
+            package com.example.lessons.l16;
+
+            import static org.junit.jupiter.api.Assertions.*;
+
+            import org.junit.jupiter.api.BeforeEach;
+            import org.junit.jupiter.api.DisplayName;
+            import org.junit.jupiter.api.Test;
+            import org.junit.jupiter.params.ParameterizedTest;
+            import org.junit.jupiter.params.provider.CsvSource;
+
+            class PriceCalculatorTest {
+                private PriceCalculator calc;
+
+                @BeforeEach                                  // runs before EVERY test: fresh object, no shared state
+                void setUp() {
+                    calc = new PriceCalculator(20);          // 20 % VAT
+                }
+
+                @Test
+                @DisplayName("adds VAT to the net price")
+                void addsVat() {
+                    long gross = calc.gross(1_000);          // Act
+                    assertEquals(1_200, gross);              // Assert: expected first, actual second
+                }
+
+                @Test
+                void rejectsNegativePrices() {
+                    var e = assertThrows(IllegalArgumentException.class, () -> calc.gross(-1));
+                    assertTrue(e.getMessage().contains("negative"));
+                }
+
+                @ParameterizedTest(name = "{0} cents → {1} cents")
+                @CsvSource({"0, 0", "5, 6", "999, 1199"})   // rounding cases in one table
+                void roundsHalfUp(long net, long expected) {
+                    assertEquals(expected, calc.gross(net));
+                }
+            }
+          </script>
+          <p>Click the ▶ next to the class (or run <code>./gradlew :lessons:test</code>). Green bar = all good; a failure shows <em>expected</em> vs <em>actual</em> and a link to the line.</p>
+          <div class="callout note">
+            <div class="ci">🤖</div>
+            <div><span class="ct">JUnit 4 on Android</span>
+              <p>Android app modules still use <b>JUnit 4</b> by default (<code>@Test</code> from <code>org.junit</code>, <code>@Before</code> instead of <code>@BeforeEach</code>, <code>@Rule</code>s). The ideas are identical — the final project's tests use JUnit 4 so they work with AndroidX test rules. Lesson 21 covers instrumented and UI tests.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="testable" data-title="Testable design & fakes">
+          <div class="sec-head"><h2><span class="sec-num">16.2</span>Designing for testability: fakes</h2></div>
+          <p>Code that reaches out to the clock, the network or a database directly is hard to test. Depend on an <b>interface</b>, receive it through the constructor, and in tests pass a <b>fake</b> — a tiny, controllable implementation.</p>
+          <script type="text/plain" data-code="java" data-file="Fakes.java" data-run>
+            import java.time.LocalTime;
+            import java.util.ArrayList;
+            import java.util.List;
+
+            interface TimeSource { LocalTime now(); }
+            interface Notifier { void send(String message); }
+
+            class Reminder {                                     // production code
+                private final TimeSource time;
+                private final Notifier notifier;
+
+                Reminder(TimeSource time, Notifier notifier) {   // dependencies are injected
+                    this.time = time;
+                    this.notifier = notifier;
+                }
+
+                void tick() {
+                    if (time.now().getHour() == 20) notifier.send("Log today's expenses!");
+                }
+            }
+
+            public class Fakes {
+                static int failures = 0;
+                static void check(boolean ok, String name) {
+                    System.out.println((ok ? "PASS " : "FAIL ") + name);
+                    if (!ok) failures++;
+                }
+
+                public static void main(String[] args) {
+                    List<String> sent = new ArrayList<>();
+                    Notifier fakeNotifier = sent::add;                       // records instead of notifying
+
+                    new Reminder(() -> LocalTime.of(20, 0), fakeNotifier).tick();
+                    check(sent.equals(List.of("Log today's expenses!")), "notifies at 20:00");
+
+                    sent.clear();
+                    new Reminder(() -> LocalTime.of(9, 30), fakeNotifier).tick();
+                    check(sent.isEmpty(), "silent at 09:30");
+
+                    System.out.println(failures == 0 ? "All tests passed" : failures + " failed");
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            PASS notifies at 20:00
+            PASS silent at 09:30
+            All tests passed
+          </script>
+          <div class="callout tip">
+            <div class="ci">🎭</div>
+            <div><span class="ct">Fakes vs mocks</span>
+              <p>A <b>fake</b> is a real, simple implementation (an in-memory repository). A <b>mock</b> (Mockito: <code>mock(Notifier.class)</code>, <code>verify(notifier).send("…")</code>) records calls and lets you assert on them. Prefer fakes for data and state; reach for mocks when you need to verify an interaction with something you don't own.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="annotations" data-title="Annotations & reflection">
+          <div class="sec-head"><h2><span class="sec-num">16.3</span>Annotations and reflection</h2></div>
+          <p>An <b>annotation</b> attaches metadata to code (<code>@Override</code>, <code>@Test</code>, Room's <code>@Entity</code>). Some are read by the compiler or annotation processors at build time; those with <code>RetentionPolicy.RUNTIME</code> can be read while the program runs through <b>reflection</b> — the API for inspecting classes, methods and fields dynamically. Here is how a test framework works, in 40 lines:</p>
+          <script type="text/plain" data-code="java" data-file="MiniJUnit.java" data-run>
+            import java.lang.annotation.ElementType;
+            import java.lang.annotation.Retention;
+            import java.lang.annotation.RetentionPolicy;
+            import java.lang.annotation.Target;
+            import java.lang.reflect.InvocationTargetException;
+            import java.lang.reflect.Method;
+            import java.util.Arrays;
+            import java.util.Comparator;
+
+            @Retention(RetentionPolicy.RUNTIME)     // keep it in the class file AND visible at runtime
+            @Target(ElementType.METHOD)             // only allowed on methods
+            @interface Check {
+                String value() default "";          // annotation parameter
+            }
+
+            class CalculatorChecks {
+                @Check("addition works")
+                void add() { if (2 + 2 != 4) throw new AssertionError("2 + 2 != 4"); }
+
+                @Check("division by zero throws")
+                void divide() {
+                    try { int x = 1 / 0; throw new AssertionError("no exception"); }
+                    catch (ArithmeticException expected) { }
+                }
+
+                @Check
+                void broken() { throw new AssertionError("expected 5 but was 6"); }
+
+                void helper() { }                    // not annotated → not run
+            }
+
+            public class MiniJUnit {
+                public static void main(String[] args) throws Exception {
+                    Class<?> type = CalculatorChecks.class;
+                    Object instance = type.getDeclaredConstructor().newInstance();
+                    Method[] methods = type.getDeclaredMethods();
+                    Arrays.sort(methods, Comparator.comparing(Method::getName));   // reflection order is unspecified
+                    int passed = 0, failed = 0;
+                    for (Method m : methods) {
+                        Check check = m.getAnnotation(Check.class);
+                        if (check == null) continue;
+                        String name = check.value().isEmpty() ? m.getName() : check.value();
+                        try {
+                            m.invoke(instance);
+                            System.out.println("✔ " + name);
+                            passed++;
+                        } catch (InvocationTargetException e) {                  // wraps what the method threw
+                            System.out.println("✘ " + name + ": " + e.getCause().getMessage());
+                            failed++;
+                        }
+                    }
+                    System.out.println(passed + " passed, " + failed + " failed");
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            ✔ addition works
+            ✘ broken: expected 5 but was 6
+            ✔ division by zero throws
+            2 passed, 1 failed
+          </script>
+          <div class="callout warn">
+            <div class="ci">⚙️</div>
+            <div><span class="ct">Reflection on Android</span>
+              <p>Reflection is slow-ish and bypasses compile-time checks. On Android, release builds are shrunk and obfuscated by <b>R8</b>, which renames or removes classes it thinks are unused — breaking code that finds them by name. That's why libraries like Room and Hilt generate code at <em>build time</em> with annotation processors instead, and why reflection-based libraries (e.g. Gson) need <code>-keep</code> rules (lesson 21).</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="jvm" data-title="JVM memory & GC">
+          <div class="sec-head"><h2><span class="sec-num">16.4</span>Inside the JVM: memory, GC and the JIT</h2></div>
+          <div class="grid grid-3">
+            <div class="glass card"><h4>Stack</h4><p class="small">One per thread. Holds a frame per active method call with its local variables and parameters (primitives and references). Freed automatically on return. Too deep → <code>StackOverflowError</code>.</p></div>
+            <div class="glass card"><h4>Heap</h4><p class="small">Shared by all threads. Every object and array lives here. Reclaimed by the garbage collector when unreachable. Too full → <code>OutOfMemoryError</code>.</p></div>
+            <div class="glass card"><h4>Metaspace</h4><p class="small">Class metadata: methods, bytecode, constant pools. Grows as classes are loaded.</p></div>
+          </div>
+          <ul class="mt">
+            <li><b>Generational GC</b>: most objects die young, so the heap has a young generation collected often and cheaply, and an old generation collected rarely. Modern collectors (G1, ZGC) pause your program for only milliseconds.</li>
+            <li><b>JIT</b>: the JVM interprets bytecode, profiles it, and compiles hot methods to optimised machine code — inlining calls and removing allocations. That's why Java benchmarks need a warm-up.</li>
+            <li><b>ART on Android</b> combines ahead-of-time compilation (at install / with Baseline Profiles), a JIT and a concurrent copying GC. Each app has a heap limit (often 256–512 MB) — leaks hit it fast.</li>
+            <li><b>Memory leaks</b> in Java are objects still reachable but no longer needed: static references to Activities, listeners never unregistered, unbounded caches. Find them with Android Studio's <b>Memory Profiler</b> (heap dumps) and LeakCanary.</li>
+          </ul>
+        </section>
+
+        <section class="doc-section" id="patterns" data-title="Design patterns">
+          <div class="sec-head"><h2><span class="sec-num">16.5</span>Design patterns you'll meet on Android</h2></div>
+          <div class="table-wrap">
+            <table class="t">
+              <thead><tr><th>Pattern</th><th>Idea</th><th>Where you'll see it</th></tr></thead>
+              <tbody>
+                <tr><td><b>Singleton</b></td><td>exactly one instance</td><td>the Room database, Retrofit client (lesson 20)</td></tr>
+                <tr><td><b>Builder</b></td><td>step-by-step construction (lesson 09)</td><td><code>NotificationCompat.Builder</code>, <code>Room.databaseBuilder</code>, <code>AlertDialog.Builder</code></td></tr>
+                <tr><td><b>Factory</b></td><td>a method decides which object to create</td><td><code>ViewModelProvider.Factory</code>, <code>Intent</code> helpers</td></tr>
+                <tr><td><b>Strategy</b></td><td>swap an algorithm at runtime</td><td><code>Comparator</code>, <code>Interpolator</code>, <code>LayoutManager</code></td></tr>
+                <tr><td><b>Observer</b></td><td>notify subscribers of changes</td><td>click listeners, <code>LiveData</code>, <code>TextWatcher</code></td></tr>
+                <tr><td><b>Adapter</b></td><td>convert one interface into another</td><td><code>RecyclerView.Adapter</code>: your data → views</td></tr>
+                <tr><td><b>Repository / Facade</b></td><td>one simple API over complex subsystems</td><td>the data layer in lesson 19</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <script type="text/plain" data-code="java" data-file="PatternsDemo.java" data-run>
+            import java.util.ArrayList;
+            import java.util.List;
+            import java.util.Map;
+            import java.util.function.Consumer;
+            import java.util.function.LongUnaryOperator;
+
+            public class PatternsDemo {
+                // Singleton — the "holder" idiom: lazy and thread-safe without locks.
+                static final class Database {
+                    private Database() { System.out.println("database opened once"); }
+                    private static class Holder { static final Database INSTANCE = new Database(); }
+                    static Database get() { return Holder.INSTANCE; }
+                }
+
+                // Observer — subscribers get notified when the value changes.
+                static final class Observable<T> {
+                    private final List<Consumer<T>> observers = new ArrayList<>();
+                    private T value;
+                    void observe(Consumer<T> o) { observers.add(o); if (value != null) o.accept(value); }
+                    void set(T v) { value = v; observers.forEach(o -> o.accept(v)); }
+                }
+
+                // Strategy + Factory — pick a pricing algorithm by name.
+                static final Map<String, LongUnaryOperator> PRICING = Map.of(
+                        "regular", c -> c,
+                        "student", c -> c * 80 / 100,
+                        "staff", c -> c / 2);
+
+                static LongUnaryOperator pricingFor(String customerType) {
+                    return PRICING.getOrDefault(customerType, PRICING.get("regular"));
+                }
+
+                public static void main(String[] args) {
+                    System.out.println(Database.get() == Database.get());
+
+                    Observable<Integer> cartSize = new Observable<>();
+                    cartSize.observe(n -> System.out.println("badge shows " + n));
+                    cartSize.set(1);
+                    cartSize.set(2);
+                    cartSize.observe(n -> System.out.println("late subscriber sees " + n));
+
+                    for (String type : new String[] {"student", "staff", "alien"}) {
+                        System.out.println(type + " pays " + pricingFor(type).applyAsLong(1_000));
+                    }
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            database opened once
+            true
+            badge shows 1
+            badge shows 2
+            late subscriber sees 2
+            student pays 800
+            staff pays 500
+            alien pays 1000
+          </script>
+          <p class="small muted">The simplest correct singleton of all is an enum with one constant: <code>enum Settings { INSTANCE; … }</code>. In Android apps, prefer creating one instance in your <code>Application</code> class and passing it where needed (dependency injection) over global singletons — it keeps code testable.</p>
+        </section>
+
+        <section class="doc-section" id="checklist" data-title="Expert checklist">
+          <div class="sec-head"><h2><span class="sec-num">16.6</span>The code-review checklist</h2></div>
+          <ul class="checklist">
+            <li>Names say what things <em>are</em> and methods say what they <em>do</em>; no abbreviations a newcomer can't decode.</li>
+            <li>Classes are small, focused and immutable where possible; fields are <code>private final</code> by default.</li>
+            <li>Public methods validate arguments; nothing returns <code>null</code> where an empty collection or <code>Optional</code> would do.</li>
+            <li><code>equals</code>/<code>hashCode</code> are overridden together (or the type is a record).</li>
+            <li>Exceptions are specific, never swallowed, and keep their cause.</li>
+            <li>Resources are closed with try-with-resources; threads and executors are shut down.</li>
+            <li>Shared mutable state is avoided or properly synchronised.</li>
+            <li>Dependencies are passed in (interfaces), so every class can be unit-tested with fakes.</li>
+            <li>Behaviour is covered by fast unit tests that run on every change.</li>
+          </ul>
+        </section>
+
+        <section class="doc-section" id="exercises" data-title="Exercises">
+          <div class="sec-head"><h2><span class="sec-num">16.7</span>Exercises</h2></div>
+          <details class="exercise">
+            <summary>Exercise 1 — Test a validator <span class="badge green">Easy</span></summary>
+            <div class="ex-body">
+              <p>Write <code>isStrongPassword(String)</code> (≥ 8 chars, a digit, an upper-case letter) and a table of test cases checked in <code>main</code>, printing PASS/FAIL like a parameterised test.</p>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run>
+                public class PasswordTest {
+                    static boolean isStrongPassword(String p) {
+                        return p != null && p.length() >= 8
+                                && p.chars().anyMatch(Character::isDigit)
+                                && p.chars().anyMatch(Character::isUpperCase);
+                    }
+
+                    public static void main(String[] args) {
+                        Object[][] cases = {{"Secret123", true}, {"short1A", false}, {"alllowercase1", false}, {"NoDigitsHere", false}, {null, false}};
+                        int failed = 0;
+                        for (Object[] c : cases) {
+                            boolean actual = isStrongPassword((String) c[0]);
+                            boolean ok = actual == (boolean) c[1];
+                            if (!ok) failed++;
+                            System.out.println((ok ? "PASS " : "FAIL ") + c[0] + " → " + actual);
+                        }
+                        System.out.println(failed == 0 ? "green bar" : failed + " failures");
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output>
+                PASS Secret123 → true
+                PASS short1A → false
+                PASS alllowercase1 → false
+                PASS NoDigitsHere → false
+                PASS null → false
+                green bar
+              </script>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 2 — An event bus <span class="badge blue">Medium</span></summary>
+            <div class="ex-body">
+              <p>Build a type-safe event bus: <code>&lt;T&gt; void subscribe(Class&lt;T&gt; type, Consumer&lt;T&gt; handler)</code> and <code>void publish(Object event)</code> that delivers only to handlers registered for the event's class.</p>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run>
+                import java.util.ArrayList;
+                import java.util.HashMap;
+                import java.util.List;
+                import java.util.Map;
+                import java.util.function.Consumer;
+
+                public class EventBus {
+                    private final Map<Class<?>, List<Consumer<Object>>> handlers = new HashMap<>();
+
+                    <T> void subscribe(Class<T> type, Consumer<T> handler) {
+                        handlers.computeIfAbsent(type, k -> new ArrayList<>()).add(e -> handler.accept(type.cast(e)));
+                    }
+
+                    void publish(Object event) {
+                        handlers.getOrDefault(event.getClass(), List.of()).forEach(h -> h.accept(event));
+                    }
+
+                    record ExpenseAdded(String title) { }
+                    record BudgetExceeded(long overCents) { }
+
+                    public static void main(String[] args) {
+                        EventBus bus = new EventBus();
+                        bus.subscribe(ExpenseAdded.class, e -> System.out.println("list refresh: " + e.title()));
+                        bus.subscribe(BudgetExceeded.class, e -> System.out.println("warning: over by " + e.overCents()));
+                        bus.subscribe(ExpenseAdded.class, e -> System.out.println("analytics: added"));
+                        bus.publish(new ExpenseAdded("Taxi"));
+                        bus.publish(new BudgetExceeded(1_250));
+                        bus.publish("ignored: nobody listens to String");
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output>
+                list refresh: Taxi
+                analytics: added
+                warning: over by 1250
+              </script>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 3 — A tiny dependency container <span class="badge amber">Challenge</span></summary>
+            <div class="ex-body">
+              <p>Write a <code>Container</code> with <code>&lt;T&gt; void singleton(Class&lt;T&gt; type, Supplier&lt;T&gt; factory)</code> and <code>&lt;T&gt; T get(Class&lt;T&gt; type)</code> that creates each object lazily, once. This is what Hilt/Dagger generate for you — and what Spendly's <code>AppContainer</code> does by hand.</p>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run>
+                import java.util.HashMap;
+                import java.util.Map;
+                import java.util.function.Supplier;
+
+                public class Container {
+                    private final Map<Class<?>, Supplier<?>> factories = new HashMap<>();
+                    private final Map<Class<?>, Object> instances = new HashMap<>();
+
+                    <T> void singleton(Class<T> type, Supplier<T> factory) { factories.put(type, factory); }
+
+                    <T> T get(Class<T> type) {
+                        Object existing = instances.get(type);
+                        if (existing == null) {
+                            Supplier<?> f = factories.get(type);
+                            if (f == null) throw new IllegalStateException("No binding for " + type.getSimpleName());
+                            existing = f.get();
+                            instances.put(type, existing);
+                        }
+                        return type.cast(existing);
+                    }
+
+                    interface Api { String fetch(); }
+                    record Repository(Api api) { String load() { return "repo(" + api.fetch() + ")"; } }
+
+                    public static void main(String[] args) {
+                        Container c = new Container();
+                        c.singleton(Api.class, () -> { System.out.println("creating Api"); return () -> "data"; });
+                        c.singleton(Repository.class, () -> new Repository(c.get(Api.class)));
+                        System.out.println(c.get(Repository.class).load());
+                        System.out.println(c.get(Repository.class) == c.get(Repository.class));
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output>
+                creating Api
+                repo(data)
+                true
+              </script>
+            </div>
+          </details>
+        </section>
+
+        <section class="doc-section" id="quiz" data-title="Quiz">
+          <div class="sec-head"><h2><span class="sec-num">16.8</span>Quiz</h2></div>
+          <script type="application/json" data-quiz>
+          [
+            {"q": "In `assertEquals(a, b)`, which argument is the expected value?", "options": ["`a`", "`b`", "It doesn't matter", "Neither"], "answer": 0, "explain": "JUnit's convention is expected first, actual second — failure messages read 'expected: <a> but was: <b>'."},
+            {"q": "Why inject a `TimeSource` instead of calling `LocalTime.now()` inside a class?", "options": ["It's faster", "Tests can supply a fixed time, making behaviour deterministic", "LocalTime.now() is deprecated", "Android forbids it"], "answer": 1, "explain": "Injected dependencies can be replaced by fakes, so tests control the clock instead of depending on when they run."},
+            {"q": "What must a custom annotation declare to be readable through reflection at runtime?", "options": ["`@Target(METHOD)`", "`@Retention(RetentionPolicy.RUNTIME)`", "`@Documented`", "Nothing"], "answer": 1, "explain": "The default retention is CLASS: stored in bytecode but not visible via reflection."},
+            {"q": "Where are objects created with `new` stored?", "options": ["On the thread's stack", "On the heap", "In metaspace", "In registers"], "answer": 1, "explain": "Objects live on the shared heap; the stack holds only local primitives and references to heap objects."},
+            {"q": "`RecyclerView.Adapter` is an example of which pattern?", "options": ["Singleton", "Adapter", "Builder", "Visitor"], "answer": 1, "explain": "It adapts your data (a list of items) to the interface RecyclerView needs (view holders bound to positions)."}
+          ]
+          </script>
+        </section>
+
+        <section class="doc-section" id="references" data-title="Further reading">
+          <div class="sec-head"><h2><span class="sec-num">16.9</span>Further reading</h2></div>
+          <ul>
+            <li><a href="https://junit.org/junit5/docs/current/user-guide/" target="_blank" rel="noopener">JUnit 5 user guide</a></li>
+            <li><a href="https://dev.java/learn/annotations/" target="_blank" rel="noopener">dev.java — Annotations</a> · <a href="https://dev.java/learn/reflection/" target="_blank" rel="noopener">Reflection</a></li>
+            <li><a href="https://dev.java/learn/jvm/" target="_blank" rel="noopener">dev.java — The JVM</a></li>
+            <li><a href="https://developer.android.com/studio/profile/memory-profiler" target="_blank" rel="noopener">Android Studio — Memory Profiler</a></li>
+            <li>Joshua Bloch, <em>Effective Java</em> (3rd ed.) · Gamma et al., <em>Design Patterns</em></li>
+          </ul>
+        </section>
+
+        <div id="pager"></div>
+      </div>
+    </main>
+  </div>
+  <div id="site-footer"></div>
+  <script src="assets/js/core.js?v=__BUILD__"></script>
+</body>
+</html>

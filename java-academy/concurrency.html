@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Concurrency — Java Academy</title>
+  <meta name="description" content="Java concurrency: threads, race conditions, synchronized, atomics, executors, concurrent collections, CompletableFuture, virtual threads and Android&#x27;s main-thread rules.">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="assets/css/main.css?v=__BUILD__">
+  <script>try{var t=localStorage.getItem("ja-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body data-page="concurrency">
+  <div id="site-header"></div>
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+      <div class="content-inner">
+
+        <header class="page-hero">
+          <nav class="crumbs"><a href="index.html">Home</a><span>/</span><span>Advanced Java</span><span>/</span><span>Lesson 15</span></nav>
+          <div class="eyebrow">Lesson 15 · Advanced Java</div>
+          <h1>Concurrency</h1>
+          <p class="lead">On Android, one thread draws the UI; anything slow must happen elsewhere or the app freezes. On servers, thousands of requests run at once. Learn threads, the bugs they cause, and the high-level tools — executors, atomics, concurrent collections, <code>CompletableFuture</code> and virtual threads — that make concurrency manageable.</p>
+          <div class="page-meta"><span>⏱ 75 min</span><span>🎯 Advanced</span><span>🧩 Prerequisite: lesson 13</span></div>
+          <div class="objectives">
+            <h4>You will be able to</h4>
+            <ul>
+              <li>Start and join threads</li>
+              <li>Explain and fix race conditions</li>
+              <li>Use <code>synchronized</code>, atomics and <code>volatile</code></li>
+              <li>Run tasks on an <code>ExecutorService</code></li>
+              <li>Compose async work with <code>CompletableFuture</code></li>
+              <li>Apply the main-thread rules of Android</li>
+            </ul>
+          </div>
+        </header>
+
+        <section class="doc-section" id="threads" data-title="Threads">
+          <div class="sec-head"><h2><span class="sec-num">15.1</span>Threads</h2></div>
+          <p>A <b>thread</b> is an independent path of execution inside your program; all threads share the same heap. You give a thread a <code>Runnable</code> and call <code>start()</code> (not <code>run()</code>, which would just execute it on the current thread). <code>join()</code> waits for it to finish.</p>
+          <script type="text/plain" data-code="java" data-file="Threads.java" data-run>
+            public class Threads {
+                public static void main(String[] args) throws InterruptedException {
+                    Runnable download = () -> {
+                        String me = Thread.currentThread().getName();
+                        for (int i = 1; i <= 3; i++) {
+                            System.out.println(me + " chunk " + i);
+                            try { Thread.sleep(10); } catch (InterruptedException e) { return; }
+                        }
+                    };
+                    Thread a = new Thread(download, "worker-A");
+                    Thread b = new Thread(download, "worker-B");
+                    a.start();
+                    b.start();                       // both now run concurrently with main
+                    System.out.println("main keeps going…");
+                    a.join();                        // wait for both to finish
+                    b.join();
+                    System.out.println("all downloads done");
+                }
+            }
+          </script>
+          <script type="text/plain" data-output="Possible output — the interleaving changes from run to run" data-loose>
+            main keeps going…
+            worker-A chunk 1
+            worker-B chunk 1
+            worker-B chunk 2
+            worker-A chunk 2
+            worker-A chunk 3
+            worker-B chunk 3
+            all downloads done
+          </script>
+          <p>The order of lines between the threads is <b>not deterministic</b> — the OS scheduler decides. Only the last line is guaranteed to come last, thanks to <code>join()</code>.</p>
+        </section>
+
+        <section class="doc-section" id="races" data-title="Race conditions">
+          <div class="sec-head"><h2><span class="sec-num">15.2</span>Race conditions and how to fix them</h2></div>
+          <p><code>count++</code> looks atomic but is three steps: read, add, write. When two threads interleave those steps, updates are lost. That's a <b>race condition</b>.</p>
+          <script type="text/plain" data-code="java" data-file="Race.java" data-run>
+            import java.util.concurrent.atomic.AtomicInteger;
+
+            public class Race {
+                static int unsafeCount = 0;
+                static int syncCount = 0;
+                static final Object lock = new Object();
+                static final AtomicInteger atomicCount = new AtomicInteger();
+
+                public static void main(String[] args) throws InterruptedException {
+                    Runnable work = () -> {
+                        for (int i = 0; i < 100_000; i++) {
+                            unsafeCount++;                          // ✗ data race
+                            synchronized (lock) { syncCount++; }    // ✔ one thread at a time
+                            atomicCount.incrementAndGet();          // ✔ lock-free atomic operation
+                        }
+                    };
+                    Thread t1 = new Thread(work), t2 = new Thread(work);
+                    t1.start(); t2.start();
+                    t1.join(); t2.join();
+                    System.out.println("unsafe:       " + unsafeCount + (unsafeCount < 200_000 ? "  ← updates lost!" : ""));
+                    System.out.println("synchronized: " + syncCount);
+                    System.out.println("atomic:       " + atomicCount.get());
+                }
+            }
+          </script>
+          <script type="text/plain" data-output="Typical output — the unsafe number differs every run" data-loose>
+            unsafe:       131877  ← updates lost!
+            synchronized: 200000
+            atomic:       200000
+          </script>
+          <div class="table-wrap">
+            <table class="t">
+              <thead><tr><th>Tool</th><th>Guarantees</th><th>Use for</th></tr></thead>
+              <tbody>
+                <tr><td><code>synchronized</code> (method or block)</td><td>mutual exclusion + visibility</td><td>compound actions on shared state</td></tr>
+                <tr><td><code>AtomicInteger</code>, <code>AtomicLong</code>, <code>AtomicReference</code></td><td>single-variable atomic updates</td><td>counters, flags, “set once” values</td></tr>
+                <tr><td><code>volatile</code></td><td>visibility only (no atomic <code>++</code>)</td><td>a stop flag written by one thread, read by others</td></tr>
+                <tr><td>Immutable objects</td><td>nothing to protect</td><td>the best option when possible</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="callout danger">
+            <div class="ci">🔒</div>
+            <div><span class="ct">Deadlock</span>
+              <p>Thread 1 holds lock A and waits for B; thread 2 holds B and waits for A — both wait forever. Avoid it by always acquiring locks in the same order, keeping synchronized blocks tiny, and never calling unknown code (callbacks) while holding a lock.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="executors" data-title="ExecutorService">
+          <div class="sec-head"><h2><span class="sec-num">15.3</span>Executors: thread pools done right</h2></div>
+          <p>Creating a thread per task is expensive and unbounded. An <code>ExecutorService</code> manages a pool of reusable threads; you submit tasks and get back <code>Future</code>s for their results.</p>
+          <script type="text/plain" data-code="java" data-file="Executors1.java" data-run>
+            import java.util.List;
+            import java.util.concurrent.Callable;
+            import java.util.concurrent.ExecutorService;
+            import java.util.concurrent.Executors;
+            import java.util.concurrent.Future;
+            import java.util.concurrent.TimeUnit;
+
+            public class Executors1 {
+                static long slowSquare(int n) throws InterruptedException {
+                    Thread.sleep(50);                               // pretend this is a network call
+                    return (long) n * n;
+                }
+
+                public static void main(String[] args) throws Exception {
+                    ExecutorService pool = Executors.newFixedThreadPool(4);
+                    try {
+                        Future<Long> single = pool.submit(() -> slowSquare(12));   // Callable: returns a value
+                        System.out.println("submitted; doing other work…");
+                        System.out.println("12² = " + single.get());               // blocks until done
+
+                        List<Callable<Long>> tasks = List.of(() -> slowSquare(1), () -> slowSquare(2),
+                                () -> slowSquare(3), () -> slowSquare(4));
+                        long start = System.nanoTime();
+                        long sum = 0;
+                        for (Future<Long> f : pool.invokeAll(tasks)) sum += f.get();
+                        long ms = (System.nanoTime() - start) / 1_000_000;
+                        System.out.println("sum " + sum + (ms < 190 ? " — ran in parallel" : " — ran sequentially?"));
+                    } finally {
+                        pool.shutdown();                                           // always shut pools down
+                        pool.awaitTermination(5, TimeUnit.SECONDS);
+                    }
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            submitted; doing other work…
+            12² = 144
+            sum 30 — ran in parallel
+          </script>
+          <p class="small muted">Four 50 ms tasks finish in about 50 ms because four pool threads run them at the same time. <code>Future.get()</code> rethrows a task's exception wrapped in <code>ExecutionException</code>.</p>
+        </section>
+
+        <section class="doc-section" id="concurrent-collections" data-title="Concurrent collections">
+          <div class="sec-head"><h2><span class="sec-num">15.4</span>Concurrent collections</h2></div>
+          <p>Regular <code>HashMap</code> and <code>ArrayList</code> are not thread-safe. <code>java.util.concurrent</code> provides collections designed for sharing:</p>
+          <script type="text/plain" data-code="java" data-file="ConcurrentCollections.java" data-run>
+            import java.util.concurrent.ArrayBlockingQueue;
+            import java.util.concurrent.BlockingQueue;
+            import java.util.concurrent.ConcurrentHashMap;
+            import java.util.concurrent.ExecutorService;
+            import java.util.concurrent.Executors;
+            import java.util.concurrent.TimeUnit;
+
+            public class ConcurrentCollections {
+                public static void main(String[] args) throws Exception {
+                    ConcurrentHashMap<String, Integer> hits = new ConcurrentHashMap<>();
+                    ExecutorService pool = Executors.newFixedThreadPool(8);
+                    for (int i = 0; i < 1_000; i++) {
+                        String page = (i % 3 == 0) ? "/home" : "/settings";
+                        pool.submit(() -> hits.merge(page, 1, Integer::sum));   // atomic per key
+                    }
+                    pool.shutdown();
+                    pool.awaitTermination(5, TimeUnit.SECONDS);
+                    System.out.println(new java.util.TreeMap<>(hits));
+
+                    // Producer–consumer: the queue blocks when full (put) or empty (take).
+                    BlockingQueue<String> queue = new ArrayBlockingQueue<>(2);
+                    Thread producer = new Thread(() -> {
+                        try {
+                            for (String job : new String[] {"resize", "upload", "notify", "STOP"}) queue.put(job);
+                        } catch (InterruptedException ignored) { }
+                    });
+                    producer.start();
+                    String job;
+                    while (!(job = queue.take()).equals("STOP")) System.out.println("processing " + job);
+                    producer.join();
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            {/home=334, /settings=666}
+            processing resize
+            processing upload
+            processing notify
+          </script>
+          <p class="small muted">Also worth knowing: <code>CopyOnWriteArrayList</code> (many readers, rare writers — listener lists), <code>ConcurrentLinkedQueue</code>, <code>CountDownLatch</code> (wait for N events) and <code>Semaphore</code> (limit concurrent access).</p>
+        </section>
+
+        <section class="doc-section" id="completablefuture" data-title="CompletableFuture">
+          <div class="sec-head"><h2><span class="sec-num">15.5</span><code>CompletableFuture</code>: composing async work</h2></div>
+          <p><code>Future.get()</code> blocks. <code>CompletableFuture</code> lets you describe what happens <em>when</em> a result arrives — transform it, combine two results, recover from errors — without blocking a thread while you wait.</p>
+          <script type="text/plain" data-code="java" data-file="Async.java" data-run>
+            import java.util.concurrent.CompletableFuture;
+            import java.util.concurrent.ExecutorService;
+            import java.util.concurrent.Executors;
+
+            public class Async {
+                static String fetchUser(int id) { sleep(60); return "user" + id; }
+                static int fetchBalance(String user) { sleep(40); return user.length() * 100; }
+                static double fetchRate() { sleep(50); return 1.1; }
+                static void sleep(long ms) { try { Thread.sleep(ms); } catch (InterruptedException e) { throw new RuntimeException(e); } }
+
+                public static void main(String[] args) {
+                    ExecutorService io = Executors.newFixedThreadPool(4);
+                    try {
+                        CompletableFuture<Integer> balance = CompletableFuture
+                                .supplyAsync(() -> fetchUser(7), io)            // runs on the pool
+                                .thenApply(String::toUpperCase)                 // transform the result
+                                .thenApplyAsync(Async::fetchBalance, io);       // then another async step
+                        CompletableFuture<Double> rate = CompletableFuture.supplyAsync(Async::fetchRate, io); // in parallel
+
+                        CompletableFuture<String> report = balance
+                                .thenCombine(rate, (b, r) -> String.format("balance in USD: %.2f", b * r))
+                                .exceptionally(e -> "unavailable: " + e.getMessage());
+                        System.out.println(report.join());                       // wait at the very end
+
+                        String recovered = CompletableFuture
+                                .supplyAsync(() -> { if (true) throw new IllegalStateException("offline"); return "data"; }, io)
+                                .exceptionally(e -> "cached data (" + e.getCause().getMessage() + ")")
+                                .join();
+                        System.out.println(recovered);
+                    } finally {
+                        io.shutdown();
+                    }
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            balance in USD: 550.00
+            cached data (offline)
+          </script>
+        </section>
+
+        <section class="doc-section" id="virtual-threads" data-title="Virtual threads">
+          <div class="sec-head"><h2><span class="sec-num">15.6</span>Virtual threads (Java 21)</h2></div>
+          <p>Platform threads are expensive (≈1 MB of stack each), so servers used to need complex async code. <b>Virtual threads</b> are lightweight threads managed by the JVM: you can run a million of them, writing simple blocking code.</p>
+          <script type="text/plain" data-code="java" data-file="Virtual.java" data-run>
+            import java.util.concurrent.ExecutorService;
+            import java.util.concurrent.Executors;
+            import java.util.concurrent.atomic.AtomicInteger;
+
+            public class Virtual {
+                public static void main(String[] args) {
+                    AtomicInteger done = new AtomicInteger();
+                    long start = System.nanoTime();
+                    try (ExecutorService exec = Executors.newVirtualThreadPerTaskExecutor()) {   // AutoCloseable since 19
+                        for (int i = 0; i < 10_000; i++) {
+                            exec.submit(() -> {
+                                Thread.sleep(100);           // blocking is cheap on a virtual thread
+                                done.incrementAndGet();
+                                return null;
+                            });
+                        }
+                    }                                       // close() waits for all tasks
+                    long ms = (System.nanoTime() - start) / 1_000_000;
+                    System.out.println(done.get() + " tasks finished" + (ms < 5_000 ? " in well under 5 s" : ""));
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            10000 tasks finished in well under 5 s
+          </script>
+          <div class="callout warn">
+            <div class="ci">🤖</div>
+            <div><span class="ct">Not on Android</span>
+              <p>Virtual threads are a JDK 21 feature for server and desktop JVMs. Android's runtime doesn't provide them; on Android use a small fixed pool (<code>Executors.newFixedThreadPool</code>), WorkManager for deferrable work, or Kotlin coroutines in Kotlin code.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="android" data-title="Concurrency on Android">
+          <div class="sec-head"><h2><span class="sec-num">15.7</span>Concurrency on Android</h2></div>
+          <figure class="diagram">
+            <svg viewBox="0 0 700 170" width="700" role="img" aria-label="Main thread hands work to a background executor and receives results back">
+              <defs><marker id="arw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#f89820"/></marker></defs>
+              <g font-family="Inter, sans-serif" font-size="13">
+                <rect x="10" y="20" width="680" height="44" rx="8" fill="rgba(61,220,132,.12)" stroke="#3ddc84"/>
+                <text x="24" y="47" fill="currentColor" font-weight="700">Main (UI) thread</text><text x="200" y="47" fill="#9a98a8">draws frames every 16 ms · handles touches · lifecycle callbacks</text>
+                <rect x="10" y="110" width="680" height="44" rx="8" fill="rgba(108,184,255,.12)" stroke="#6cb8ff"/>
+                <text x="24" y="137" fill="currentColor" font-weight="700">Background executor</text><text x="200" y="137" fill="#9a98a8">database · network · files · heavy computation</text>
+                <path d="M160 64L250 108" stroke="#f89820" stroke-width="2" marker-end="url(#arw)"/><text x="120" y="92" fill="#f89820" font-size="12">execute(task)</text>
+                <path d="M480 108L560 66" stroke="#f89820" stroke-width="2" marker-end="url(#arw)"/><text x="530" y="98" fill="#f89820" font-size="12">postValue / post(result)</text>
+              </g>
+            </svg>
+            <figcaption>Rule 1: never block the main thread. Rule 2: only the main thread may touch views.</figcaption>
+          </figure>
+          <ul>
+            <li>Block the main thread for ~5 seconds and Android shows <b>“App isn't responding” (ANR)</b>. Network on the main thread throws <code>NetworkOnMainThreadException</code> immediately.</li>
+            <li>Updating a <code>View</code> from a background thread throws <code>CalledFromWrongThreadException</code>.</li>
+            <li>The modern Java pattern: a background <code>ExecutorService</code> in your repository, results delivered with <code>LiveData.postValue()</code> (lesson 19), which the UI observes on the main thread.</li>
+            <li><code>AsyncTask</code> is deprecated — don't use it. For work that must survive the app closing (sync, reminders), use <b>WorkManager</b> (lesson 20).</li>
+          </ul>
+          <script type="text/plain" data-code="java" data-file="MainActivity.java (Android)">
+            private final ExecutorService io = Executors.newSingleThreadExecutor();
+            private final Handler main = new Handler(Looper.getMainLooper());
+
+            private void loadReport() {
+                progress.setVisibility(View.VISIBLE);
+                io.execute(() -> {                                   // background thread
+                    String report = repository.buildMonthlyReport(); // slow: database work
+                    main.post(() -> {                                // back on the main thread
+                        progress.setVisibility(View.GONE);
+                        reportText.setText(report);
+                    });
+                });
+            }
+
+            @Override protected void onDestroy() {
+                super.onDestroy();
+                io.shutdownNow();                                     // don't leak the thread
+            }
+          </script>
+        </section>
+
+        <section class="doc-section" id="exercises" data-title="Exercises">
+          <div class="sec-head"><h2><span class="sec-num">15.8</span>Exercises</h2></div>
+          <details class="exercise">
+            <summary>Exercise 1 — Parallel sum <span class="badge green">Easy</span></summary>
+            <div class="ex-body">
+              <p>Sum the numbers 1…10,000,000 by splitting the range into 4 chunks, each summed by a <code>Callable</code> on a fixed pool of 4 threads.</p>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run>
+                import java.util.ArrayList;
+                import java.util.List;
+                import java.util.concurrent.Callable;
+                import java.util.concurrent.ExecutorService;
+                import java.util.concurrent.Executors;
+                import java.util.concurrent.Future;
+
+                public class ParallelSum {
+                    public static void main(String[] args) throws Exception {
+                        long n = 10_000_000, chunk = n / 4;
+                        ExecutorService pool = Executors.newFixedThreadPool(4);
+                        try {
+                            List<Callable<Long>> parts = new ArrayList<>();
+                            for (int i = 0; i < 4; i++) {
+                                long from = i * chunk + 1, to = (i == 3) ? n : (i + 1) * chunk;
+                                parts.add(() -> { long s = 0; for (long x = from; x <= to; x++) s += x; return s; });
+                            }
+                            long total = 0;
+                            for (Future<Long> f : pool.invokeAll(parts)) total += f.get();
+                            System.out.println(total + " (formula: " + n * (n + 1) / 2 + ")");
+                        } finally {
+                            pool.shutdown();
+                        }
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output>
+                50000005000000 (formula: 50000005000000)
+              </script>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 2 — A thread-safe bank account <span class="badge blue">Medium</span></summary>
+            <div class="ex-body">
+              <p>Make <code>withdraw</code> safe so that 100 concurrent withdrawals of 10 from a balance of 500 succeed exactly 50 times and the balance never goes negative. Why isn't an <code>AtomicLong</code> with separate <code>get</code> and <code>addAndGet</code> calls enough?</p>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run>
+                import java.util.concurrent.ExecutorService;
+                import java.util.concurrent.Executors;
+                import java.util.concurrent.TimeUnit;
+                import java.util.concurrent.atomic.AtomicInteger;
+
+                public class SafeAccount {
+                    private long balance = 500;
+
+                    synchronized boolean withdraw(long amount) {    // check-then-act must be ONE atomic step
+                        if (balance < amount) return false;
+                        balance -= amount;
+                        return true;
+                    }
+
+                    synchronized long balance() { return balance; }
+
+                    public static void main(String[] args) throws InterruptedException {
+                        SafeAccount acc = new SafeAccount();
+                        AtomicInteger ok = new AtomicInteger();
+                        ExecutorService pool = Executors.newFixedThreadPool(8);
+                        for (int i = 0; i < 100; i++) pool.execute(() -> { if (acc.withdraw(10)) ok.incrementAndGet(); });
+                        pool.shutdown();
+                        pool.awaitTermination(5, TimeUnit.SECONDS);
+                        System.out.println(ok.get() + " withdrawals, balance " + acc.balance());
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output>
+                50 withdrawals, balance 0
+              </script>
+              <p class="small muted">Separate atomic calls leave a gap between the check and the update in which another thread can withdraw. (A <code>compareAndSet</code> loop on an <code>AtomicLong</code> also works.)</p>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 3 — Fastest mirror <span class="badge amber">Challenge</span></summary>
+            <div class="ex-body">
+              <p>Three “mirrors” return the same file after 120, 40 and 80 ms. Use <code>CompletableFuture.anyOf</code> to take the first result, and add a timeout fallback with <code>completeOnTimeout</code>.</p>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run>
+                import java.util.concurrent.CompletableFuture;
+                import java.util.concurrent.TimeUnit;
+
+                public class Mirrors {
+                    static CompletableFuture<String> mirror(String name, long ms) {
+                        return CompletableFuture.supplyAsync(() -> {
+                            try { Thread.sleep(ms); } catch (InterruptedException e) { throw new RuntimeException(e); }
+                            return "file from " + name;
+                        });
+                    }
+
+                    public static void main(String[] args) {
+                        Object first = CompletableFuture.anyOf(mirror("eu", 120), mirror("asia", 40), mirror("us", 80)).join();
+                        System.out.println(first);
+
+                        String slow = mirror("moon", 2_000)
+                                .completeOnTimeout("fallback copy", 100, TimeUnit.MILLISECONDS)
+                                .join();
+                        System.out.println(slow);
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output>
+                file from asia
+                fallback copy
+              </script>
+            </div>
+          </details>
+        </section>
+
+        <section class="doc-section" id="quiz" data-title="Quiz">
+          <div class="sec-head"><h2><span class="sec-num">15.9</span>Quiz</h2></div>
+          <script type="application/json" data-quiz>
+          [
+            {"q": "What's the difference between `thread.start()` and `thread.run()`?", "options": ["None", "`start()` creates a new thread that calls run(); `run()` just executes on the current thread", "`run()` is faster", "`start()` waits for completion"], "answer": 1, "explain": "Calling run() directly is an ordinary method call — no concurrency."},
+            {"q": "Two threads each execute `count++` 1,000 times on a shared `int`. The result is…", "options": ["Always 2000", "At most 2000, often less", "Always 1000", "A compile error"], "answer": 1, "explain": "++ is read-modify-write; interleavings lose updates. Use synchronized or AtomicInteger."},
+            {"q": "What does `volatile` guarantee?", "options": ["Atomic increments", "Mutual exclusion", "Visibility of writes to other threads", "Thread-local storage"], "answer": 2, "explain": "volatile ensures other threads see the latest value; it doesn't make compound operations atomic."},
+            {"q": "On Android, where must you update a TextView after loading data in the background?", "options": ["On the background thread", "On the main (UI) thread", "On any thread", "In onDestroy"], "answer": 1, "explain": "Only the main thread may touch views; use LiveData.postValue, Handler.post or runOnUiThread."},
+            {"q": "Why should every ExecutorService eventually be shut down?", "options": ["Otherwise tasks don't start", "Its non-daemon threads keep running, preventing JVM exit and leaking resources", "shutdown() makes tasks faster", "It's only required on Android"], "answer": 1, "explain": "Pool threads wait for new work forever. shutdown() lets them finish queued tasks and exit; try-with-resources works since Java 19."}
+          ]
+          </script>
+        </section>
+
+        <section class="doc-section" id="references" data-title="Further reading">
+          <div class="sec-head"><h2><span class="sec-num">15.10</span>Further reading</h2></div>
+          <ul>
+            <li><a href="https://dev.java/learn/concurrency/" target="_blank" rel="noopener">dev.java — Concurrency</a></li>
+            <li><a href="https://openjdk.org/jeps/444" target="_blank" rel="noopener">JEP 444 — Virtual threads</a></li>
+            <li><a href="https://developer.android.com/guide/background/threading" target="_blank" rel="noopener">Android — Running Android tasks in background threads</a></li>
+            <li>Brian Goetz et al., <em>Java Concurrency in Practice</em></li>
+          </ul>
+        </section>
+
+        <div id="pager"></div>
+      </div>
+    </main>
+  </div>
+  <div id="site-footer"></div>
+  <script src="assets/js/core.js?v=__BUILD__"></script>
+</body>
+</html>
