@@ -1,0 +1,453 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Generics — Java Academy</title>
+  <meta name="description" content="Java generics: generic classes, records and methods, bounded types, wildcards and PECS, type erasure and generic interfaces.">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="assets/css/main.css?v=__BUILD__">
+  <script>try{var t=localStorage.getItem("ja-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body data-page="generics">
+  <div id="site-header"></div>
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+      <div class="content-inner">
+
+        <header class="page-hero">
+          <nav class="crumbs"><a href="index.html">Home</a><span>/</span><span>Core APIs &amp; Functional Java</span><span>/</span><span>Lesson 11</span></nav>
+          <div class="eyebrow">Lesson 11 · Core APIs &amp; Functional Java</div>
+          <h1>Generics</h1>
+          <p class="lead">Generics let you write one class or method that works for many types while keeping full compile-time type safety. They're why <code>List&lt;String&gt;</code> can't accidentally hold an <code>Integer</code> — and understanding them makes the collections, streams and Android APIs ahead much easier.</p>
+          <div class="page-meta"><span>⏱ 45 min</span><span>🎯 Intermediate</span><span>🧩 Prerequisite: lessons 07–08</span></div>
+          <div class="objectives">
+            <h4>You will be able to</h4>
+            <ul>
+              <li>Explain the problem generics solve</li>
+              <li>Write generic classes, interfaces and methods</li>
+              <li>Constrain type parameters with bounds</li>
+              <li>Use <code>? extends</code> and <code>? super</code> (PECS)</li>
+              <li>Explain type erasure and its limits</li>
+              <li>Read generic signatures in the JDK docs</li>
+            </ul>
+          </div>
+        </header>
+
+        <section class="doc-section" id="why" data-title="Why generics?">
+          <div class="sec-head"><h2><span class="sec-num">11.1</span>Why generics?</h2></div>
+          <p>Before Java 5, collections held plain <code>Object</code>s. Every read needed a cast, and mistakes surfaced only at runtime. With a type argument the compiler catches them:</p>
+          <div class="compare">
+            <div><div class="cmp-label c-orange">Raw type (don't)</div>
+              <script type="text/plain" data-code="java" data-file="Raw.java">
+                List names = new ArrayList();
+                names.add("Ada");
+                names.add(42);                    // compiles 😬
+                String s = (String) names.get(1); // ClassCastException at runtime
+              </script>
+            </div>
+            <div><div class="cmp-label c-primary">Generic</div>
+              <script type="text/plain" data-code="java" data-file="Generic.java">
+                List<String> names = new ArrayList<>();  // <> = diamond: inferred
+                names.add("Ada");
+                names.add(42);                    // ✗ compile error
+                String s = names.get(0);          // no cast needed
+              </script>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="classes" data-title="Generic classes">
+          <div class="sec-head"><h2><span class="sec-num">11.2</span>Generic classes and records</h2></div>
+          <p>Declare <b>type parameters</b> in angle brackets after the class name. By convention they're single capital letters: <code>T</code> (type), <code>E</code> (element), <code>K</code>/<code>V</code> (key/value), <code>R</code> (result).</p>
+          <script type="text/plain" data-code="java" data-file="Boxes.java" data-run>
+            import java.util.function.Function;
+
+            class Box<T> {
+                private T value;
+                Box(T value) { this.value = value; }
+                T get() { return value; }
+                void set(T value) { this.value = value; }
+
+                <R> Box<R> map(Function<T, R> f) {     // a generic method inside a generic class
+                    return new Box<>(f.apply(value));
+                }
+
+                @Override public String toString() { return "Box(" + value + ")"; }
+            }
+
+            record Pair<A, B>(A first, B second) {
+                Pair<B, A> swap() { return new Pair<>(second, first); }
+            }
+
+            public class Boxes {
+                public static void main(String[] args) {
+                    Box<String> name = new Box<>("android");
+                    Box<Integer> length = name.map(String::length);     // Box<String> → Box<Integer>
+                    System.out.println(name + " " + length);
+                    // name.set(42);                                     // ✗ incompatible types
+
+                    Pair<String, Integer> p = new Pair<>("age", 36);
+                    System.out.println(p + " → " + p.swap());
+                    int age = p.second();                                // auto-unboxed, no cast
+                    System.out.println(age + 1);
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            Box(android) Box(7)
+            Pair[first=age, second=36] → Pair[first=36, second=age]
+            37
+          </script>
+          <p class="small muted">Type arguments must be reference types: <code>Box&lt;int&gt;</code> doesn't compile — use <code>Box&lt;Integer&gt;</code> and let autoboxing do the rest.</p>
+        </section>
+
+        <section class="doc-section" id="methods" data-title="Generic methods">
+          <div class="sec-head"><h2><span class="sec-num">11.3</span>Generic methods</h2></div>
+          <p>A method can have its own type parameters, declared <em>before</em> the return type. The compiler infers them from the arguments.</p>
+          <script type="text/plain" data-code="java" data-file="GenericMethods.java" data-run>
+            import java.util.ArrayList;
+            import java.util.List;
+
+            public class GenericMethods {
+                static <T> T firstOrDefault(List<T> list, T fallback) {
+                    return list.isEmpty() ? fallback : list.get(0);
+                }
+
+                static <T> List<T> repeat(T item, int times) {
+                    List<T> out = new ArrayList<>();
+                    for (int i = 0; i < times; i++) out.add(item);
+                    return out;
+                }
+
+                public static void main(String[] args) {
+                    System.out.println(firstOrDefault(List.of("a", "b"), "none"));   // T = String
+                    System.out.println(firstOrDefault(List.<Integer>of(), -1));      // explicit type witness
+                    List<Double> zeros = repeat(0.0, 3);                             // T = Double
+                    System.out.println(zeros);
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            a
+            -1
+            [0.0, 0.0, 0.0]
+          </script>
+        </section>
+
+        <section class="doc-section" id="bounds" data-title="Bounded type parameters">
+          <div class="sec-head"><h2><span class="sec-num">11.4</span>Bounded type parameters</h2></div>
+          <p>Sometimes you need to call methods on <code>T</code>. A <b>bound</b> <code>&lt;T extends X&gt;</code> restricts <code>T</code> to <code>X</code> or its subtypes (for interfaces too — it's always <code>extends</code>), and in return lets you use <code>X</code>'s methods.</p>
+          <script type="text/plain" data-code="java" data-file="Bounds.java" data-run>
+            import java.util.List;
+
+            public class Bounds {
+                static <T extends Comparable<T>> T max(List<T> items) {
+                    T best = items.get(0);
+                    for (T item : items) {
+                        if (item.compareTo(best) > 0) best = item;    // allowed thanks to the bound
+                    }
+                    return best;
+                }
+
+                static double sum(List<? extends Number> numbers) {  // any list of Number subtypes
+                    double total = 0;
+                    for (Number n : numbers) total += n.doubleValue();
+                    return total;
+                }
+
+                public static void main(String[] args) {
+                    System.out.println(max(List.of(3, 17, 8)));
+                    System.out.println(max(List.of("pear", "apple", "zucchini")));
+                    System.out.println(sum(List.of(1, 2.5, 3L)));       // Integer, Double, Long
+                    // max(List.of(new Object()));                     // ✗ Object is not Comparable
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            17
+            zucchini
+            6.5
+          </script>
+          <p class="small muted">Multiple bounds use <code>&amp;</code>: <code>&lt;T extends Number &amp; Comparable&lt;T&gt;&gt;</code> (a class bound must come first).</p>
+        </section>
+
+        <section class="doc-section" id="wildcards" data-title="Wildcards & PECS">
+          <div class="sec-head"><h2><span class="sec-num">11.5</span>Wildcards and PECS</h2></div>
+          <p>Generics are <b>invariant</b>: even though <code>Integer</code> is a <code>Number</code>, a <code>List&lt;Integer&gt;</code> is <em>not</em> a <code>List&lt;Number&gt;</code> — otherwise you could add a <code>Double</code> to a list of integers. Wildcards restore flexibility:</p>
+          <div class="table-wrap">
+            <table class="t">
+              <thead><tr><th>Wildcard</th><th>Accepts</th><th>You can…</th><th>Mnemonic</th></tr></thead>
+              <tbody>
+                <tr><td><code>List&lt;? extends Number&gt;</code></td><td>List of Number, Integer, Double…</td><td><b>read</b> elements as <code>Number</code>; can't add</td><td><b>P</b>roducer <b>E</b>xtends</td></tr>
+                <tr><td><code>List&lt;? super Integer&gt;</code></td><td>List of Integer, Number, Object</td><td><b>add</b> Integers; reads give <code>Object</code></td><td><b>C</b>onsumer <b>S</b>uper</td></tr>
+                <tr><td><code>List&lt;?&gt;</code></td><td>any list</td><td>read as <code>Object</code>, check size, clear</td><td>“I don't care”</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <script type="text/plain" data-code="java" data-file="Pecs.java" data-run>
+            import java.util.ArrayList;
+            import java.util.List;
+
+            public class Pecs {
+                // src PRODUCES T's (extends), dst CONSUMES T's (super) — the shape of Collections.copy
+                static <T> void copy(List<? extends T> src, List<? super T> dst) {
+                    for (T item : src) dst.add(item);
+                }
+
+                public static void main(String[] args) {
+                    List<Integer> ints = List.of(1, 2, 3);
+                    List<Number> numbers = new ArrayList<>(List.of(0.5));
+                    List<Object> objects = new ArrayList<>();
+
+                    copy(ints, numbers);       // T = Integer: Integer → Number list ✔
+                    copy(numbers, objects);    // T = Number:  Number → Object list ✔
+                    System.out.println(numbers);
+                    System.out.println(objects);
+
+                    // List<Number> wrong = ints;            // ✗ invariance: List<Integer> is not List<Number>
+                    List<? extends Number> view = ints;      // ✔ read-only view
+                    System.out.println(view.get(0).intValue() + 10);
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            [0.5, 1, 2, 3]
+            [0.5, 1, 2, 3]
+            11
+          </script>
+          <div class="callout tip">
+            <div class="ci">📖</div>
+            <div><span class="ct">Reading JDK signatures</span>
+              <p>Now you can decode <code>Collections.sort(List&lt;T&gt; list)</code> with <code>&lt;T extends Comparable&lt;? super T&gt;&gt;</code>: “T must be comparable to itself <em>or to one of its supertypes</em>”. Wildcards in your own APIs belong in <b>parameters</b>, rarely in return types.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="erasure" data-title="Type erasure">
+          <div class="sec-head"><h2><span class="sec-num">11.6</span>Type erasure</h2></div>
+          <p>Generics exist only at compile time. The compiler checks types, inserts casts, then <b>erases</b> type arguments: at runtime a <code>List&lt;String&gt;</code> and a <code>List&lt;Integer&gt;</code> are both just <code>List</code>. This kept old bytecode compatible, but has consequences:</p>
+          <script type="text/plain" data-code="java" data-file="Erasure.java" data-run>
+            import java.util.ArrayList;
+            import java.util.List;
+
+            public class Erasure {
+                static <T> T create(Class<T> type) throws Exception {    // pass a "type token" instead of new T()
+                    return type.getDeclaredConstructor().newInstance();
+                }
+
+                public static void main(String[] args) throws Exception {
+                    List<String> a = new ArrayList<>();
+                    List<Integer> b = new ArrayList<>();
+                    System.out.println(a.getClass() == b.getClass());   // same runtime class
+
+                    Object o = a;
+                    // if (o instanceof List<String>) { }                // ✗ can't check an erased type
+                    if (o instanceof List<?> list) System.out.println("a list of size " + list.size());
+
+                    StringBuilder sb = create(StringBuilder.class);
+                    System.out.println(sb.append("made via Class<T>"));
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            true
+            a list of size 0
+            made via Class<T>
+          </script>
+          <ul>
+            <li>No <code>new T()</code>, <code>new T[n]</code> or <code>T.class</code> — pass a <code>Class&lt;T&gt;</code> (Room and Gson do exactly this).</li>
+            <li>No <code>instanceof List&lt;String&gt;</code>.</li>
+            <li>You can't overload <code>f(List&lt;String&gt;)</code> and <code>f(List&lt;Integer&gt;)</code> — after erasure they clash.</li>
+            <li>Static fields can't use the class's <code>T</code> — there is only one static field for all parameterisations.</li>
+          </ul>
+        </section>
+
+        <section class="doc-section" id="interfaces" data-title="Generic interfaces">
+          <div class="sec-head"><h2><span class="sec-num">11.7</span>Generic interfaces in practice</h2></div>
+          <p>Generic interfaces describe reusable contracts. This is the shape of data-access code you'll write on Android:</p>
+          <script type="text/plain" data-code="java" data-file="Repos.java" data-run>
+            import java.util.HashMap;
+            import java.util.List;
+            import java.util.Map;
+            import java.util.Optional;
+            import java.util.function.Function;
+
+            interface Repository<T, ID> {
+                void save(T item);
+                Optional<T> findById(ID id);
+                List<T> findAll();
+            }
+
+            class InMemoryRepository<T, ID> implements Repository<T, ID> {
+                private final Map<ID, T> store = new HashMap<>();
+                private final Function<T, ID> idOf;
+
+                InMemoryRepository(Function<T, ID> idOf) { this.idOf = idOf; }
+
+                @Override public void save(T item) { store.put(idOf.apply(item), item); }
+                @Override public Optional<T> findById(ID id) { return Optional.ofNullable(store.get(id)); }
+                @Override public List<T> findAll() { return List.copyOf(store.values()); }
+            }
+
+            record Note(long id, String text) { }
+
+            public class Repos {
+                public static void main(String[] args) {
+                    Repository<Note, Long> notes = new InMemoryRepository<>(Note::id);
+                    notes.save(new Note(1, "Buy milk"));
+                    notes.save(new Note(2, "Learn generics"));
+                    notes.save(new Note(1, "Buy oat milk"));      // same id → replaced
+                    System.out.println(notes.findById(1L).map(Note::text).orElse("?"));
+                    System.out.println(notes.findById(9L).isPresent());
+                    System.out.println(notes.findAll().size());
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            Buy oat milk
+            false
+            2
+          </script>
+        </section>
+
+        <section class="doc-section" id="exercises" data-title="Exercises">
+          <div class="sec-head"><h2><span class="sec-num">11.8</span>Exercises</h2></div>
+          <details class="exercise">
+            <summary>Exercise 1 — A generic stack <span class="badge green">Easy</span></summary>
+            <div class="ex-body">
+              <p>Implement <code>Stack&lt;E&gt;</code> backed by an <code>ArrayList</code> with <code>push</code>, <code>pop</code> (throws <code>IllegalStateException</code> when empty), <code>peek</code> returning <code>Optional&lt;E&gt;</code> and <code>size</code>.</p>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run>
+                import java.util.ArrayList;
+                import java.util.List;
+                import java.util.Optional;
+
+                class Stack<E> {
+                    private final List<E> items = new ArrayList<>();
+                    void push(E e) { items.add(e); }
+                    E pop() {
+                        if (items.isEmpty()) throw new IllegalStateException("empty stack");
+                        return items.remove(items.size() - 1);
+                    }
+                    Optional<E> peek() { return items.isEmpty() ? Optional.empty() : Optional.of(items.get(items.size() - 1)); }
+                    int size() { return items.size(); }
+                }
+
+                public class StackDemo {
+                    public static void main(String[] args) {
+                        Stack<String> s = new Stack<>();
+                        s.push("a"); s.push("b"); s.push("c");
+                        System.out.println(s.pop() + s.pop() + " left=" + s.size() + " peek=" + s.peek().orElse("-"));
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output>
+                cb left=1 peek=a
+              </script>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 2 — Min and max at once <span class="badge blue">Medium</span></summary>
+            <div class="ex-body">
+              <p>Write <code>static &lt;T extends Comparable&lt;? super T&gt;&gt; Pair&lt;T, T&gt; minMax(List&lt;? extends T&gt; items)</code> returning both extremes in one pass.</p>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run>
+                import java.util.List;
+
+                public class MinMax {
+                    record Pair<A, B>(A first, B second) { }
+
+                    static <T extends Comparable<? super T>> Pair<T, T> minMax(List<? extends T> items) {
+                        T min = items.get(0), max = items.get(0);
+                        for (T t : items) {
+                            if (t.compareTo(min) < 0) min = t;
+                            if (t.compareTo(max) > 0) max = t;
+                        }
+                        return new Pair<>(min, max);
+                    }
+
+                    public static void main(String[] args) {
+                        System.out.println(minMax(List.of(5, 3, 9, 1, 7)));
+                        System.out.println(minMax(List.of("kiwi", "apple", "mango")));
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output>
+                Pair[first=1, second=9]
+                Pair[first=apple, second=mango]
+              </script>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 3 — Why doesn't it compile? <span class="badge amber">Challenge</span></summary>
+            <div class="ex-body">
+              <p>Explain each error, then fix <code>addDefaults</code> so it accepts a <code>List&lt;Number&gt;</code> and a <code>List&lt;Object&gt;</code> as well as a <code>List&lt;Integer&gt;</code>.</p>
+              <script type="text/plain" data-code="java" data-file="Task">
+                static void addDefaults(List<Integer> target) { target.add(0); target.add(1); }
+
+                List<Number> nums = new ArrayList<>();
+                addDefaults(nums);                     // ✗ (1)
+                List<? extends Number> ro = new ArrayList<Integer>();
+                ro.add(5);                             // ✗ (2)
+              </script>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run>
+                import java.util.ArrayList;
+                import java.util.List;
+
+                public class Fix {
+                    // (1) List<Number> is not a List<Integer> (invariance). The method only ADDS Integers,
+                    //     i.e. the list is a consumer → use ? super Integer.
+                    static void addDefaults(List<? super Integer> target) { target.add(0); target.add(1); }
+
+                    public static void main(String[] args) {
+                        List<Number> nums = new ArrayList<>();
+                        List<Object> objs = new ArrayList<>(List.of("x"));
+                        addDefaults(nums);
+                        addDefaults(objs);
+                        System.out.println(nums + " " + objs);
+                        // (2) a List<? extends Number> might really be a List<Double>, so adding an
+                        //     Integer could corrupt it — the compiler forbids all adds except null.
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output>
+                [0, 1] [x, 0, 1]
+              </script>
+            </div>
+          </details>
+        </section>
+
+        <section class="doc-section" id="quiz" data-title="Quiz">
+          <div class="sec-head"><h2><span class="sec-num">11.9</span>Quiz</h2></div>
+          <script type="application/json" data-quiz>
+          [
+            {"q": "Which declaration is legal?", "options": ["`List<int> xs;`", "`List<Integer> xs = new ArrayList<>();`", "`List<> xs = new ArrayList<String>();`", "`new T()` inside a generic class"], "answer": 1, "explain": "Type arguments must be reference types, the diamond goes on the right side, and `new T()` is impossible because of erasure."},
+            {"q": "Is `List<Integer>` a subtype of `List<Number>`?", "options": ["Yes", "No — generics are invariant", "Only at runtime", "Only for final classes"], "answer": 1, "explain": "If it were, you could add a Double to a list of Integers through the List<Number> reference. Use `List<? extends Number>` to accept both."},
+            {"q": "A method reads Numbers from a list and never adds. Which parameter type is most flexible?", "options": ["`List<Number>`", "`List<? super Number>`", "`List<? extends Number>`", "`List<Object>`"], "answer": 2, "explain": "Producer Extends: the list produces values you read."},
+            {"q": "What does type erasure mean?", "options": ["Generic types are removed by R8", "Type arguments are checked at compile time and removed from the bytecode", "Generics are slower", "Generic code can't be debugged"], "answer": 1, "explain": "The JVM sees raw types; the compiler inserts the casts. That's why you can't do `instanceof List<String>`."},
+            {"q": "In `<T extends Comparable<T>>`, what does `extends` mean when Comparable is an interface?", "options": ["T must be a class that extends a class called Comparable", "T must be a subtype of Comparable<T> (implement it)", "Nothing", "T must be final"], "answer": 1, "explain": "In bounds, `extends` covers both subclassing and implementing."}
+          ]
+          </script>
+        </section>
+
+        <section class="doc-section" id="references" data-title="Further reading">
+          <div class="sec-head"><h2><span class="sec-num">11.10</span>Further reading</h2></div>
+          <ul>
+            <li><a href="https://dev.java/learn/generics/" target="_blank" rel="noopener">dev.java — Generics</a></li>
+            <li><a href="https://docs.oracle.com/javase/tutorial/java/generics/wildcardGuidelines.html" target="_blank" rel="noopener">Guidelines for wildcard use</a></li>
+            <li>Joshua Bloch, <em>Effective Java</em>, chapter 5 (items 26–33)</li>
+          </ul>
+        </section>
+
+        <div id="pager"></div>
+      </div>
+    </main>
+  </div>
+  <div id="site-footer"></div>
+  <script src="assets/js/core.js?v=__BUILD__"></script>
+</body>
+</html>

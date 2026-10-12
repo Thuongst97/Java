@@ -1,0 +1,523 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Exceptions, Null &amp; Optional — Java Academy</title>
+  <meta name="description" content="Java exceptions: stack traces, checked vs unchecked, try/catch/finally, try-with-resources, custom exceptions, NullPointerException defences and Optional.">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="assets/css/main.css?v=__BUILD__">
+  <script>try{var t=localStorage.getItem("ja-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body data-page="exceptions">
+  <div id="site-header"></div>
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+      <div class="content-inner">
+
+        <header class="page-hero">
+          <nav class="crumbs"><a href="index.html">Home</a><span>/</span><span>Object-Oriented Java</span><span>/</span><span>Lesson 10</span></nav>
+          <div class="eyebrow">Lesson 10 · Object-Oriented Java</div>
+          <h1>Exceptions, Null &amp; Optional</h1>
+          <p class="lead">Things go wrong: files are missing, networks drop, users type nonsense. Learn to read stack traces, handle and throw exceptions properly, manage resources with try-with-resources, and tame <code>null</code> — the most common crash on Android.</p>
+          <div class="page-meta"><span>⏱ 50 min</span><span>🎯 Intermediate</span><span>🧩 Prerequisite: lesson 08</span></div>
+          <div class="objectives">
+            <h4>You will be able to</h4>
+            <ul>
+              <li>Read a stack trace and find the bug</li>
+              <li>Distinguish checked and unchecked exceptions</li>
+              <li>Use try/catch/finally and multi-catch</li>
+              <li>Close resources with try-with-resources</li>
+              <li>Design custom exceptions</li>
+              <li>Avoid NullPointerException and use <code>Optional</code> well</li>
+            </ul>
+          </div>
+        </header>
+
+        <section class="doc-section" id="stack-traces" data-title="Reading stack traces">
+          <div class="sec-head"><h2><span class="sec-num">10.1</span>What an exception is — and how to read a stack trace</h2></div>
+          <p>An <b>exception</b> is an object that describes an abnormal event. When one is <b>thrown</b>, normal execution stops and the JVM unwinds the call stack looking for a matching <code>catch</code>. If none is found, the thread dies and prints a <b>stack trace</b>:</p>
+          <script type="text/plain" data-code="java" data-file="Crash.java" data-run data-numbered>
+            public class Crash {
+                static int average(int total, int count) {
+                    return total / count;
+                }
+
+                static void report(int[] scores) {
+                    int total = 0;
+                    for (int s : scores) total += s;
+                    System.out.println("Average: " + average(total, scores.length));
+                }
+
+                public static void main(String[] args) {
+                    report(new int[] {80, 90});
+                    report(new int[] {});
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            Average: 85
+            Exception in thread "main" java.lang.ArithmeticException: / by zero
+            	at Crash.average(Crash.java:3)
+            	at Crash.report(Crash.java:9)
+            	at Crash.main(Crash.java:14)
+          </script>
+          <ol>
+            <li><b>First line</b>: the exception type (<code>ArithmeticException</code>) and message (<code>/ by zero</code>) — <em>what</em> happened.</li>
+            <li><b>Top frame</b>: where it was thrown — <code>Crash.java</code> line 3.</li>
+            <li><b>Frames below</b>: who called whom. Read downward until you reach <em>your</em> code that made the wrong decision — here line 14 passes an empty array.</li>
+          </ol>
+          <div class="callout tip">
+            <div class="ci">🤖</div>
+            <div><span class="ct">On Android</span>
+              <p>An uncaught exception shows the “App keeps stopping” dialog, and the trace appears in <b>Logcat</b> (filter by level <em>Error</em> or search <code>FATAL EXCEPTION</code>). Click the blue <code>File.java:line</code> links to jump to the code. Long traces have <code>Caused by:</code> sections — the <em>last</em> one is usually the root cause.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="hierarchy" data-title="Checked vs unchecked">
+          <div class="sec-head"><h2><span class="sec-num">10.2</span>The exception hierarchy: checked vs unchecked</h2></div>
+          <div class="filetree"><span class="d">Throwable</span>
+├── <span class="d">Error</span>                       <span class="c"># serious JVM problems — don't catch: OutOfMemoryError, StackOverflowError</span>
+└── <span class="d">Exception</span>                   <span class="c"># CHECKED: compiler forces you to handle or declare them</span>
+    ├── IOException, SQLException, InterruptedException …
+    └── <span class="d">RuntimeException</span>        <span class="c"># UNCHECKED: usually programming bugs</span>
+        ├── NullPointerException, IllegalArgumentException, IllegalStateException
+        ├── ArithmeticException, IndexOutOfBoundsException, ClassCastException
+        └── NumberFormatException, UnsupportedOperationException …</div>
+          <div class="table-wrap">
+            <table class="t">
+              <thead><tr><th></th><th>Checked</th><th>Unchecked (<code>RuntimeException</code>)</th></tr></thead>
+              <tbody>
+                <tr><td>Compiler enforces handling?</td><td>Yes — <code>catch</code> it or declare <code>throws</code></td><td>No</td></tr>
+                <tr><td>Meaning</td><td>A recoverable condition outside your control (file missing, network down)</td><td>A bug or violated precondition (null argument, bad index)</td></tr>
+                <tr><td>Right reaction</td><td>Handle: retry, show a message, use a fallback</td><td>Fix the code; validate inputs early</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="doc-section" id="try-catch" data-title="try / catch / finally">
+          <div class="sec-head"><h2><span class="sec-num">10.3</span><code>try</code>, <code>catch</code> and <code>finally</code></h2></div>
+          <script type="text/plain" data-code="java" data-file="TryCatch.java" data-run>
+            public class TryCatch {
+                static int parsePercent(String text) {
+                    try {
+                        int value = Integer.parseInt(text);
+                        if (value < 0 || value > 100) {
+                            throw new IllegalArgumentException("out of range: " + value);
+                        }
+                        return value;
+                    } catch (NumberFormatException e) {            // most specific first
+                        System.out.println("  not a number: " + text);
+                        return 0;
+                    } catch (IllegalArgumentException | NullPointerException e) {   // multi-catch
+                        System.out.println("  rejected (" + e.getMessage() + ")");
+                        return 0;
+                    } finally {
+                        System.out.println("  finally always runs for " + text);    // even after return
+                    }
+                }
+
+                public static void main(String[] args) {
+                    for (String s : new String[] {"42", "abc", "150"}) {
+                        System.out.println(s + " → " + parsePercent(s));
+                    }
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+              finally always runs for 42
+            42 → 42
+              not a number: abc
+              finally always runs for abc
+            abc → 0
+              rejected (out of range: 150)
+              finally always runs for 150
+            150 → 0
+          </script>
+          <ul>
+            <li>Catch blocks are tried in order; put <b>subclasses before superclasses</b> (<code>NumberFormatException</code> extends <code>IllegalArgumentException</code> — reversing them is a compile error).</li>
+            <li><code>finally</code> runs whether the block completes, returns or throws — historically used to release resources (see next section for the better way).</li>
+            <li>Never <code>return</code> from <code>finally</code>: it silently discards any exception in flight.</li>
+          </ul>
+        </section>
+
+        <section class="doc-section" id="throw" data-title="throw & throws">
+          <div class="sec-head"><h2><span class="sec-num">10.4</span><code>throw</code> and <code>throws</code></h2></div>
+          <p><code>throw</code> raises an exception. A method that may let a <em>checked</em> exception escape must declare it with <code>throws</code>, and its callers must handle it in turn.</p>
+          <script type="text/plain" data-code="java" data-file="Throws.java" data-run>
+            import java.io.FileNotFoundException;
+            import java.io.IOException;
+
+            public class Throws {
+                static String loadConfig(String name) throws IOException {     // declares a checked exception
+                    if (!name.endsWith(".json")) throw new IllegalArgumentException("Expected .json: " + name);
+                    if (name.startsWith("missing")) throw new FileNotFoundException(name);
+                    return "{ \"theme\": \"dark\" }";
+                }
+
+                public static void main(String[] args) {
+                    for (String file : new String[] {"app.json", "missing.json", "app.txt"}) {
+                        try {
+                            System.out.println(loadConfig(file));
+                        } catch (IOException e) {                                 // required: checked
+                            System.out.println("I/O problem: " + e);
+                        } catch (IllegalArgumentException e) {                    // optional: unchecked
+                            System.out.println("Bug in caller: " + e.getMessage());
+                        }
+                    }
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            { "theme": "dark" }
+            I/O problem: java.io.FileNotFoundException: missing.json
+            Bug in caller: Expected .json: app.txt
+          </script>
+        </section>
+
+        <section class="doc-section" id="resources" data-title="try-with-resources">
+          <div class="sec-head"><h2><span class="sec-num">10.5</span>try-with-resources</h2></div>
+          <p>Files, sockets, database cursors and streams must be <b>closed</b>, even when an error occurs. Declare them in <code>try ( … )</code> and Java closes them automatically, in reverse order, for any class that implements <code>AutoCloseable</code>.</p>
+          <script type="text/plain" data-code="java" data-file="Resources.java" data-run>
+            public class Resources {
+                static class Connection implements AutoCloseable {
+                    private final String name;
+                    Connection(String name) { this.name = name; System.out.println("open " + name); }
+                    void query(boolean fail) {
+                        if (fail) throw new IllegalStateException("query failed on " + name);
+                        System.out.println("query ok on " + name);
+                    }
+                    @Override public void close() { System.out.println("close " + name); }
+                }
+
+                public static void main(String[] args) {
+                    try (Connection a = new Connection("db"); Connection b = new Connection("cache")) {
+                        a.query(false);
+                        b.query(true);
+                    } catch (IllegalStateException e) {
+                        System.out.println("handled: " + e.getMessage());   // both are closed by now
+                    }
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            open db
+            open cache
+            query ok on db
+            close cache
+            close db
+            handled: query failed on cache
+          </script>
+          <p class="small muted">If <code>close()</code> itself throws while another exception is in flight, the second one is attached as a <b>suppressed</b> exception (<code>e.getSuppressed()</code>) instead of hiding the first. On Android you'll use this for <code>Cursor</code>, <code>InputStream</code> and <code>HttpURLConnection</code> streams.</p>
+        </section>
+
+        <section class="doc-section" id="custom" data-title="Custom exceptions">
+          <div class="sec-head"><h2><span class="sec-num">10.6</span>Custom exceptions and wrapping causes</h2></div>
+          <p>Create your own exception type when callers need to react to a <em>specific</em> failure. When you translate a low-level exception into a higher-level one, pass the original as the <b>cause</b> so the stack trace keeps the full story.</p>
+          <script type="text/plain" data-code="java" data-file="Custom.java" data-run>
+            class InsufficientFundsException extends Exception {          // checked: callers must decide
+                private final long missingCents;
+
+                InsufficientFundsException(long missingCents) {
+                    super("Missing " + missingCents + " cents");
+                    this.missingCents = missingCents;
+                }
+
+                long missingCents() { return missingCents; }
+            }
+
+            class RepositoryException extends RuntimeException {
+                RepositoryException(String message, Throwable cause) { super(message, cause); }
+            }
+
+            public class Custom {
+                static void pay(long balance, long price) throws InsufficientFundsException {
+                    if (price > balance) throw new InsufficientFundsException(price - balance);
+                    System.out.println("Paid " + price);
+                }
+
+                static int loadCount(String raw) {
+                    try {
+                        return Integer.parseInt(raw);
+                    } catch (NumberFormatException e) {
+                        throw new RepositoryException("Corrupt counter value", e);  // keep the cause!
+                    }
+                }
+
+                public static void main(String[] args) {
+                    try {
+                        pay(500, 300);
+                        pay(500, 800);
+                    } catch (InsufficientFundsException e) {
+                        System.out.println(e.getMessage() + " → offer top-up of " + e.missingCents());
+                    }
+                    try {
+                        loadCount("12x");
+                    } catch (RepositoryException e) {
+                        System.out.println(e.getMessage() + ", caused by " + e.getCause());
+                    }
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            Paid 300
+            Missing 300 cents → offer top-up of 300
+            Corrupt counter value, caused by java.lang.NumberFormatException: For input string: "12x"
+          </script>
+        </section>
+
+        <section class="doc-section" id="best-practices" data-title="Exception best practices">
+          <div class="sec-head"><h2><span class="sec-num">10.7</span>Exception best practices</h2></div>
+          <ul class="checklist">
+            <li><b>Fail fast</b>: validate arguments at the start of public methods — <code>Objects.requireNonNull(x, "x")</code>, <code>IllegalArgumentException</code> for bad values, <code>IllegalStateException</code> for calls at the wrong time.</li>
+            <li><b>Never swallow</b>: an empty <code>catch (Exception e) {}</code> hides bugs forever. At minimum log it (<code>Log.e(TAG, "msg", e)</code> on Android).</li>
+            <li><b>Catch specific types</b>, as close as possible to where you can actually do something useful.</li>
+            <li><b>Don't use exceptions for control flow</b> — check <code>list.isEmpty()</code> instead of catching <code>NoSuchElementException</code>.</li>
+            <li><b>Keep causes</b> when wrapping: <code>new XException("context", e)</code>.</li>
+            <li><b>Don't catch <code>Error</code></b> (or <code>Throwable</code>) unless you're writing a framework.</li>
+          </ul>
+          <script type="text/plain" data-code="java" data-file="Bad.java">
+            try {
+                saveExpense(expense);
+            } catch (Exception e) {
+                // TODO        ← ✗ the user thinks it saved; nobody will ever know it didn't
+            }
+          </script>
+        </section>
+
+        <section class="doc-section" id="null" data-title="Null & NullPointerException">
+          <div class="sec-head"><h2><span class="sec-num">10.8</span><code>null</code> and NullPointerException</h2></div>
+          <p>Calling a method or reading a field through a <code>null</code> reference throws <code>NullPointerException</code> (NPE). Since Java 14, “helpful NPE” messages tell you exactly <em>which</em> part was null:</p>
+          <script type="text/plain" data-code="java" data-file="Npe.java" data-run>
+            public class Npe {
+                record User(String name, Address address) { }
+                record Address(String city) { }
+
+                public static void main(String[] args) {
+                    User u = new User("Ada", null);
+                    System.out.println(u.address().city().toUpperCase());
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            Exception in thread "main" java.lang.NullPointerException: Cannot invoke "Npe$Address.city()" because the return value of "Npe$User.address()" is null
+            	at Npe.main(Npe.java:7)
+          </script>
+          <h3>Defences, from best to worst</h3>
+          <ol>
+            <li><b>Don't produce null</b>: return empty collections (<code>List.of()</code>) and empty strings; use <code>Optional</code> for “maybe a value” return types.</li>
+            <li><b>Reject null at the boundary</b>: <code>this.name = Objects.requireNonNull(name, "name");</code> — the error appears where the bug is, not 200 lines later.</li>
+            <li><b>Annotate</b>: on Android use <code>@NonNull</code> / <code>@Nullable</code> from <code>androidx.annotation</code>. Android Studio then warns when you dereference something nullable — and Kotlin callers see real nullable types.</li>
+            <li><b>Provide defaults</b>: <code>Objects.requireNonNullElse(value, "unknown")</code>.</li>
+            <li><b>Check explicitly</b> (<code>if (x != null)</code>) where null is a legitimate state.</li>
+          </ol>
+        </section>
+
+        <section class="doc-section" id="optional" data-title="Optional">
+          <div class="sec-head"><h2><span class="sec-num">10.9</span><code>Optional</code>: an explicit “maybe”</h2></div>
+          <p><code>Optional&lt;T&gt;</code> is a box that is either empty or contains a non-null value. Returning one makes absence part of the method's <em>type</em>, so callers can't forget to handle it.</p>
+          <script type="text/plain" data-code="java" data-file="Optionals.java" data-run>
+            import java.util.Map;
+            import java.util.Optional;
+
+            public class Optionals {
+                static final Map<String, String> EMAILS = Map.of("ada", "ada@example.com", "linus", "");
+
+                static Optional<String> findEmail(String user) {
+                    return Optional.ofNullable(EMAILS.get(user));     // empty if the map has no entry
+                }
+
+                public static void main(String[] args) {
+                    System.out.println(findEmail("ada"));
+                    System.out.println(findEmail("bob"));
+
+                    String domain = findEmail("ada")
+                            .filter(e -> !e.isBlank())
+                            .map(e -> e.substring(e.indexOf('@') + 1))
+                            .orElse("no domain");
+                    System.out.println(domain);
+
+                    System.out.println(findEmail("linus").filter(e -> !e.isBlank()).orElse("(blank)"));
+                    findEmail("bob").ifPresentOrElse(
+                            e -> System.out.println("mail " + e),
+                            () -> System.out.println("bob has no email"));
+
+                    try {
+                        findEmail("bob").orElseThrow(() -> new IllegalStateException("bob must have an email"));
+                    } catch (IllegalStateException e) {
+                        System.out.println(e.getMessage());
+                    }
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            Optional[ada@example.com]
+            Optional.empty
+            example.com
+            (blank)
+            bob has no email
+            bob must have an email
+          </script>
+          <div class="callout warn">
+            <div class="ci">🧭</div>
+            <div><span class="ct">Use Optional for return values only</span>
+              <p>Don't use it for fields, method parameters or collections (return an empty list instead). Never call <code>get()</code> without checking — use <code>orElse</code>, <code>orElseGet</code>, <code>orElseThrow</code>, <code>map</code> and <code>ifPresent</code>. And never return <code>null</code> from a method whose return type is <code>Optional</code>!</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="exercises" data-title="Exercises">
+          <div class="sec-head"><h2><span class="sec-num">10.10</span>Exercises</h2></div>
+          <details class="exercise">
+            <summary>Exercise 1 — Robust number input <span class="badge green">Easy</span></summary>
+            <div class="ex-body">
+              <p>Read lines until the user enters a valid whole number, printing “Try again” for invalid input. Use <code>Integer.parseInt</code> and catch <code>NumberFormatException</code>.</p>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run data-stdin="ten\n4.5\n10">
+                import java.util.Scanner;
+
+                public class ReadInt {
+                    public static void main(String[] args) {
+                        Scanner in = new Scanner(System.in);
+                        while (true) {
+                            System.out.print("Quantity: ");
+                            String line = in.nextLine();
+                            try {
+                                int qty = Integer.parseInt(line.strip());
+                                System.out.println("OK, " + qty);
+                                break;
+                            } catch (NumberFormatException e) {
+                                System.out.println("Try again");
+                            }
+                        }
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output="Output with input ten / 4.5 / 10">
+                Quantity: Try again
+                Quantity: Try again
+                Quantity: OK, 10
+              </script>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 2 — Validated constructor <span class="badge blue">Medium</span></summary>
+            <div class="ex-body">
+              <p>Write <code>record Email(String value)</code> whose compact constructor rejects null (<code>NullPointerException</code> via <code>requireNonNull</code>) and values without exactly one <code>@</code> (<code>IllegalArgumentException</code>), and lower-cases valid addresses.</p>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run>
+                import java.util.Objects;
+
+                public class Emails {
+                    record Email(String value) {
+                        Email {
+                            Objects.requireNonNull(value, "value");
+                            if (value.indexOf('@') < 1 || value.indexOf('@') != value.lastIndexOf('@')) {
+                                throw new IllegalArgumentException("Invalid email: " + value);
+                            }
+                            value = value.strip().toLowerCase();
+                        }
+                    }
+
+                    public static void main(String[] args) {
+                        System.out.println(new Email("Ada@Example.COM"));
+                        for (String bad : new String[] {"no-at-sign", "a@b@c", null}) {
+                            try {
+                                new Email(bad);
+                            } catch (IllegalArgumentException | NullPointerException e) {
+                                System.out.println(e.getClass().getSimpleName() + ": " + e.getMessage());
+                            }
+                        }
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output>
+                Email[value=ada@example.com]
+                IllegalArgumentException: Invalid email: no-at-sign
+                IllegalArgumentException: Invalid email: a@b@c
+                NullPointerException: value
+              </script>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 3 — Retry with backoff <span class="badge amber">Challenge</span></summary>
+            <div class="ex-body">
+              <p>A flaky operation fails twice with <code>IOException</code> then succeeds. Write <code>retry(int maxAttempts, Callable&lt;T&gt; op)</code> that retries on <code>IOException</code> only, doubling a (simulated) delay each time, and rethrows the last failure if all attempts fail.</p>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run>
+                import java.io.IOException;
+                import java.util.concurrent.Callable;
+
+                public class Retry {
+                    static int calls = 0;
+
+                    static String flaky() throws IOException {
+                        if (++calls < 3) throw new IOException("timeout #" + calls);
+                        return "data";
+                    }
+
+                    static <T> T retry(int maxAttempts, Callable<T> op) throws Exception {
+                        long delayMs = 100;
+                        IOException last = null;
+                        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+                            try {
+                                return op.call();
+                            } catch (IOException e) {
+                                last = e;
+                                System.out.println("attempt " + attempt + " failed (" + e.getMessage() + "), waiting " + delayMs + " ms");
+                                delayMs *= 2;              // Thread.sleep(delayMs) in real code
+                            }
+                        }
+                        throw last;
+                    }
+
+                    public static void main(String[] args) throws Exception {
+                        System.out.println("result: " + retry(5, Retry::flaky));
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output>
+                attempt 1 failed (timeout #1), waiting 100 ms
+                attempt 2 failed (timeout #2), waiting 200 ms
+                result: data
+              </script>
+              <p class="small muted"><code>Retry::flaky</code> is a method reference and <code>&lt;T&gt;</code> makes the method generic — both explained in lessons 11 and 13.</p>
+            </div>
+          </details>
+        </section>
+
+        <section class="doc-section" id="quiz" data-title="Quiz">
+          <div class="sec-head"><h2><span class="sec-num">10.11</span>Quiz</h2></div>
+          <script type="application/json" data-quiz>
+          [
+            {"q": "Which exception is checked?", "options": ["`NullPointerException`", "`IllegalArgumentException`", "`IOException`", "`ArrayIndexOutOfBoundsException`"], "answer": 2, "explain": "IOException extends Exception but not RuntimeException, so the compiler forces callers to catch or declare it."},
+            {"q": "When does a `finally` block run?", "options": ["Only if no exception occurred", "Only if an exception was caught", "Whenever the try block exits — normally, by return, or by exception", "Never after a return"], "answer": 2, "explain": "finally runs on every exit path (except if the JVM itself halts)."},
+            {"q": "What does try-with-resources require of the resource class?", "options": ["It must be Serializable", "It must implement AutoCloseable", "It must extend Exception", "It must be final"], "answer": 1, "explain": "Any AutoCloseable (Closeable extends it) can be declared in try(...) and is closed automatically in reverse order."},
+            {"q": "You catch a low-level SQLException and throw your own RepositoryException. What should you pass to it?", "options": ["Nothing", "Only the message", "The original exception as the cause", "`e.printStackTrace()`"], "answer": 2, "explain": "Passing the cause preserves the original stack trace (`Caused by:`), which is essential for debugging."},
+            {"q": "Where is `Optional` appropriate?", "options": ["As a field type", "As a method parameter", "As a return type for 'may be absent' results", "Inside collections"], "answer": 2, "explain": "Optional was designed as a return type. For fields and parameters, use null with annotations or overloads; for collections, return an empty collection."}
+          ]
+          </script>
+        </section>
+
+        <section class="doc-section" id="references" data-title="Further reading">
+          <div class="sec-head"><h2><span class="sec-num">10.12</span>Further reading</h2></div>
+          <ul>
+            <li><a href="https://dev.java/learn/exceptions/" target="_blank" rel="noopener">dev.java — Exceptions</a></li>
+            <li><a href="https://dev.java/learn/api/streams/optionals/" target="_blank" rel="noopener">dev.java — Using Optionals</a></li>
+            <li><a href="https://openjdk.org/jeps/358" target="_blank" rel="noopener">JEP 358 — Helpful NullPointerExceptions</a></li>
+            <li><a href="https://developer.android.com/studio/write/annotations#adding-nullness" target="_blank" rel="noopener">Android — Nullness annotations</a></li>
+          </ul>
+        </section>
+
+        <div id="pager"></div>
+      </div>
+    </main>
+  </div>
+  <div id="site-footer"></div>
+  <script src="assets/js/core.js?v=__BUILD__"></script>
+</body>
+</html>
