@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Files, I/O &amp; Date-Time — Java Academy</title>
+  <meta name="description" content="java.nio.file Path and Files, readers and writers, character encodings, CSV parsing and the java.time API, plus files and dates on Android.">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="assets/css/main.css?v=__BUILD__">
+  <script>try{var t=localStorage.getItem("ja-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body data-page="io-time">
+  <div id="site-header"></div>
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+      <div class="content-inner">
+
+        <header class="page-hero">
+          <nav class="crumbs"><a href="index.html">Home</a><span>/</span><span>Core APIs &amp; Functional Java</span><span>/</span><span>Lesson 14</span></nav>
+          <div class="eyebrow">Lesson 14 · Core APIs &amp; Functional Java</div>
+          <h1>Files, I/O &amp; Date-Time</h1>
+          <p class="lead">Real programs save data and deal with dates. Learn the modern <code>java.nio.file</code> API, readers and writers, character encodings, a robust CSV parser — and the <code>java.time</code> API that finally makes dates pleasant.</p>
+          <div class="page-meta"><span>⏱ 45 min</span><span>🎯 Intermediate</span><span>🧩 Prerequisite: lessons 10, 13</span></div>
+          <div class="objectives">
+            <h4>You will be able to</h4>
+            <ul>
+              <li>Read and write files with <code>Files</code> and <code>Path</code></li>
+              <li>Always specify a character encoding</li>
+              <li>Process large files line by line</li>
+              <li>Parse CSV into records, tolerating bad lines</li>
+              <li>Use <code>LocalDate</code>, <code>Instant</code>, <code>Duration</code> and <code>Period</code></li>
+              <li>Format and parse dates, and know the Android specifics</li>
+            </ul>
+          </div>
+        </header>
+
+        <section class="doc-section" id="files" data-title="Path & Files">
+          <div class="sec-head"><h2><span class="sec-num">14.1</span><code>Path</code> and <code>Files</code></h2></div>
+          <p><code>Path</code> represents a location; the static methods of <code>Files</code> do the work. For small files, read and write everything in one call. (This example uses a temporary directory so it runs anywhere.)</p>
+          <script type="text/plain" data-code="java" data-file="FilesDemo.java" data-run>
+            import java.io.IOException;
+            import java.nio.charset.StandardCharsets;
+            import java.nio.file.Files;
+            import java.nio.file.Path;
+            import java.nio.file.StandardOpenOption;
+            import java.util.List;
+
+            public class FilesDemo {
+                public static void main(String[] args) throws IOException {
+                    Path dir = Files.createTempDirectory("ja-demo");
+                    Path notes = dir.resolve("notes").resolve("todo.txt");      // dir/notes/todo.txt
+                    Files.createDirectories(notes.getParent());
+
+                    Files.writeString(notes, "buy milk\nlearn java\n", StandardCharsets.UTF_8);
+                    Files.writeString(notes, "ship app\n", StandardCharsets.UTF_8, StandardOpenOption.APPEND);
+
+                    List<String> lines = Files.readAllLines(notes, StandardCharsets.UTF_8);
+                    System.out.println(lines);
+                    System.out.println(notes.getFileName() + " exists=" + Files.exists(notes) + " size=" + Files.size(notes));
+
+                    Path copy = Files.copy(notes, dir.resolve("backup.txt"));
+                    try (var entries = Files.list(dir)) {                       // a Stream that must be closed
+                        entries.map(p -> p.getFileName().toString()).sorted().forEach(System.out::println);
+                    }
+                    Files.delete(copy);
+                    System.out.println("backup deleted: " + !Files.exists(copy));
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            [buy milk, learn java, ship app]
+            todo.txt exists=true size=29
+            backup.txt
+            notes
+            backup deleted: true
+          </script>
+          <div class="callout warn">
+            <div class="ci">🔤</div>
+            <div><span class="ct">Always name the encoding</span>
+              <p>Bytes become text only through a <b>charset</b>. Code that relies on the platform default produces mojibake (“Ã©” instead of “é”) on another machine. Pass <code>StandardCharsets.UTF_8</code> everywhere — <code>Files.readString</code>/<code>writeString</code> default to UTF-8, but older APIs like <code>new FileReader(file)</code> did not before Java 18.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="streams" data-title="Readers, writers & streams">
+          <div class="sec-head"><h2><span class="sec-num">14.2</span>Readers, writers and byte streams</h2></div>
+          <div class="table-wrap">
+            <table class="t">
+              <thead><tr><th></th><th>Bytes (images, zip, network)</th><th>Characters (text)</th></tr></thead>
+              <tbody>
+                <tr><td>Read</td><td><code>InputStream</code></td><td><code>Reader</code> → <code>BufferedReader</code></td></tr>
+                <tr><td>Write</td><td><code>OutputStream</code></td><td><code>Writer</code> → <code>BufferedWriter</code>, <code>PrintWriter</code></td></tr>
+                <tr><td>Bridge</td><td colspan="2"><code>new InputStreamReader(in, UTF_8)</code>, <code>new OutputStreamWriter(out, UTF_8)</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>For large files, process one line at a time so memory stays constant — the same pattern reads an HTTP response on Android (lesson 20):</p>
+          <script type="text/plain" data-code="java" data-file="LineByLine.java" data-run>
+            import java.io.BufferedReader;
+            import java.io.BufferedWriter;
+            import java.io.IOException;
+            import java.io.StringReader;
+            import java.nio.charset.StandardCharsets;
+            import java.nio.file.Files;
+            import java.nio.file.Path;
+
+            public class LineByLine {
+                public static void main(String[] args) throws IOException {
+                    Path log = Files.createTempFile("app", ".log");
+                    try (BufferedWriter out = Files.newBufferedWriter(log, StandardCharsets.UTF_8)) {
+                        for (int i = 1; i <= 1000; i++) {
+                            out.write((i % 100 == 0 ? "ERROR " : "INFO ") + "event " + i);
+                            out.newLine();
+                        }
+                    }
+
+                    int errors = 0;
+                    try (BufferedReader in = Files.newBufferedReader(log, StandardCharsets.UTF_8)) {
+                        String line;
+                        while ((line = in.readLine()) != null) {          // null = end of file
+                            if (line.startsWith("ERROR")) errors++;
+                        }
+                    }
+                    System.out.println(errors + " errors");
+
+                    try (var lines = Files.lines(log)) {                   // the same with a stream
+                        System.out.println(lines.filter(l -> l.startsWith("ERROR")).skip(8).findFirst().orElse(""));
+                    }
+
+                    // Any Reader works the same way — here one over a String:
+                    BufferedReader r = new BufferedReader(new StringReader("first\nsecond"));
+                    System.out.println(r.readLine().toUpperCase());
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            10 errors
+            ERROR event 900
+            FIRST
+          </script>
+        </section>
+
+        <section class="doc-section" id="csv" data-title="Parsing CSV">
+          <div class="sec-head"><h2><span class="sec-num">14.3</span>Parsing CSV into records</h2></div>
+          <p>A typical import job: read lines, skip the header, turn each line into a record, and collect errors instead of crashing on the first bad line.</p>
+          <script type="text/plain" data-code="java" data-file="CsvImport.java" data-run>
+            import java.math.BigDecimal;
+            import java.time.LocalDate;
+            import java.util.ArrayList;
+            import java.util.List;
+
+            public class CsvImport {
+                record Expense(LocalDate date, String title, long cents) { }
+
+                static Expense parse(String line) {
+                    String[] f = line.split(",", -1);                 // -1 keeps trailing empty fields
+                    if (f.length != 3) throw new IllegalArgumentException("expected 3 fields, got " + f.length);
+                    long cents = new BigDecimal(f[2].strip()).movePointRight(2).longValueExact();
+                    return new Expense(LocalDate.parse(f[0].strip()), f[1].strip(), cents);
+                }
+
+                public static void main(String[] args) {
+                    String csv = """
+                        date,title,amount
+                        2026-03-01,Coffee,3.50
+                        2026-03-02,Train ticket,12.80
+                        2026-03-02,Broken line
+                        2026-02-30,Impossible date,1.00
+                        2026-03-05,Lunch,9.95
+                        """;
+                    List<Expense> ok = new ArrayList<>();
+                    List<String> errors = new ArrayList<>();
+                    List<String> lines = csv.lines().toList();
+                    for (int i = 1; i < lines.size(); i++) {           // skip the header
+                        try {
+                            ok.add(parse(lines.get(i)));
+                        } catch (RuntimeException e) {
+                            errors.add("line " + (i + 1) + ": " + e.getMessage());
+                        }
+                    }
+                    ok.forEach(System.out::println);
+                    errors.forEach(System.out::println);
+                    System.out.println("total cents: " + ok.stream().mapToLong(Expense::cents).sum());
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            Expense[date=2026-03-01, title=Coffee, cents=350]
+            Expense[date=2026-03-02, title=Train ticket, cents=1280]
+            Expense[date=2026-03-05, title=Lunch, cents=995]
+            line 4: expected 3 fields, got 2
+            line 5: Text '2026-02-30' could not be parsed: Invalid date 'FEBRUARY 30'
+            total cents: 2625
+          </script>
+          <p class="small muted">Real CSV can contain quoted fields with commas inside (<code>"Smith, Ada"</code>). For production imports use a library such as Apache Commons CSV or OpenCSV.</p>
+        </section>
+
+        <section class="doc-section" id="time" data-title="java.time">
+          <div class="sec-head"><h2><span class="sec-num">14.4</span>The <code>java.time</code> API</h2></div>
+          <p><code>java.time</code> (Java 8) replaced the confusing <code>Date</code> and <code>Calendar</code>. All its types are <b>immutable</b> and thread-safe. Pick the type that matches what you mean:</p>
+          <div class="table-wrap">
+            <table class="t">
+              <thead><tr><th>Type</th><th>Represents</th><th>Example</th></tr></thead>
+              <tbody>
+                <tr><td><code>LocalDate</code></td><td>a calendar date, no time or zone</td><td>birthday, expense date</td></tr>
+                <tr><td><code>LocalTime</code></td><td>a wall-clock time</td><td>“remind me at 20:00”</td></tr>
+                <tr><td><code>LocalDateTime</code></td><td>date + time, no zone</td><td>a meeting in “local time”</td></tr>
+                <tr><td><code>Instant</code></td><td>a point on the global timeline (UTC)</td><td>timestamps, logs, server data</td></tr>
+                <tr><td><code>ZonedDateTime</code></td><td>date + time + zone rules</td><td>converting between time zones, DST</td></tr>
+                <tr><td><code>YearMonth</code>, <code>DayOfWeek</code>, <code>Month</code></td><td>partial values</td><td>monthly reports</td></tr>
+                <tr><td><code>Duration</code> / <code>Period</code></td><td>machine time (seconds) / human time (days, months)</td><td>timeouts / subscriptions</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <script type="text/plain" data-code="java" data-file="Time.java" data-run>
+            import java.time.DayOfWeek;
+            import java.time.Duration;
+            import java.time.Instant;
+            import java.time.LocalDate;
+            import java.time.LocalDateTime;
+            import java.time.LocalTime;
+            import java.time.Period;
+            import java.time.YearMonth;
+            import java.time.ZoneId;
+            import java.time.format.DateTimeFormatter;
+            import java.time.temporal.ChronoUnit;
+            import java.time.temporal.TemporalAdjusters;
+            import java.util.Locale;
+
+            public class Time {
+                public static void main(String[] args) {
+                    LocalDate today = LocalDate.of(2026, 3, 14);          // fixed "today" so output is stable
+                    System.out.println(today.plusDays(30) + " " + today.minusMonths(1) + " " + today.getDayOfWeek());
+                    System.out.println(today.with(TemporalAdjusters.lastDayOfMonth()));
+                    System.out.println(today.with(TemporalAdjusters.next(DayOfWeek.MONDAY)));
+                    System.out.println(today.isLeapYear() + " " + YearMonth.from(today).lengthOfMonth());
+
+                    LocalDate birthday = LocalDate.of(1990, 12, 10);
+                    Period age = Period.between(birthday, today);
+                    System.out.println(age.getYears() + " years, " + age.getMonths() + " months");
+                    System.out.println(ChronoUnit.DAYS.between(today, LocalDate.of(2026, 12, 25)) + " days to Christmas");
+
+                    LocalDateTime meeting = LocalDateTime.of(today, LocalTime.of(9, 30));
+                    Duration length = Duration.ofMinutes(95);
+                    System.out.println(meeting.plus(length).toLocalTime() + " (" + length.toHours() + "h " + length.toMinutesPart() + "m)");
+
+                    Instant launch = Instant.parse("2026-03-14T08:00:00Z");
+                    System.out.println(launch.atZone(ZoneId.of("Asia/Ho_Chi_Minh")).toLocalTime() + " in Ho Chi Minh City");
+                    System.out.println(launch.atZone(ZoneId.of("America/New_York")).toLocalTime() + " in New York");
+
+                    DateTimeFormatter fmt = DateTimeFormatter.ofPattern("EEE d MMM yyyy", Locale.ENGLISH);
+                    System.out.println(today.format(fmt));
+                    System.out.println(LocalDate.parse("14/03/2026", DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            2026-04-13 2026-02-14 SATURDAY
+            2026-03-31
+            2026-03-16
+            false 31
+            35 years, 3 months
+            286 days to Christmas
+            11:05 (1h 35m)
+            15:00 in Ho Chi Minh City
+            04:00 in New York
+            Sat 14 Mar 2026
+            2026-03-14
+          </script>
+          <div class="callout tip">
+            <div class="ci">🧪</div>
+            <div><span class="ct">Make “now” testable</span>
+              <p>Calling <code>LocalDate.now()</code> deep inside your logic makes tests depend on the day they run. Pass a <code>java.time.Clock</code> (or the date itself) in, and use <code>Clock.fixed(...)</code> in tests. Spendly's summary code takes the month as a parameter for exactly this reason.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="android" data-title="Files & time on Android">
+          <div class="sec-head"><h2><span class="sec-num">14.5</span>Files and time on Android</h2></div>
+          <ul>
+            <li><b>No free file system</b>: an app may write freely only to its <b>private directories</b> — <code>context.getFilesDir()</code> (persistent) and <code>context.getCacheDir()</code> (may be cleared). They're deleted when the app is uninstalled.</li>
+            <li><b>User documents</b> (downloads, photos) go through the Storage Access Framework or <code>MediaStore</code>, not raw paths.</li>
+            <li><b>Never do I/O on the main thread</b> — it freezes the UI and can trigger “Application Not Responding”. Lessons 15 and 19 show how to move work to a background thread.</li>
+            <li><b>Structured data</b> belongs in a database (Room, lesson 20) or preferences, not hand-rolled files.</li>
+            <li><code>java.time</code> is built in from <b>API 26</b> (our <code>minSdk</code>). For older devices enable core library desugaring.</li>
+          </ul>
+          <script type="text/plain" data-code="java" data-file="NotesStore.java (Android)">
+            public final class NotesStore {
+                private final File file;
+
+                public NotesStore(Context context) {
+                    this.file = new File(context.getFilesDir(), "notes.txt");   // app-private, no permission needed
+                }
+
+                public void save(String text) throws IOException {             // call from a background thread
+                    Files.writeString(file.toPath(), text, StandardCharsets.UTF_8);
+                }
+
+                public String load() throws IOException {
+                    return file.exists() ? Files.readString(file.toPath(), StandardCharsets.UTF_8) : "";
+                }
+            }
+          </script>
+        </section>
+
+        <section class="doc-section" id="exercises" data-title="Exercises">
+          <div class="sec-head"><h2><span class="sec-num">14.6</span>Exercises</h2></div>
+          <details class="exercise">
+            <summary>Exercise 1 — Word count <span class="badge green">Easy</span></summary>
+            <div class="ex-body">
+              <p>Write a text to a temporary file, then report its number of lines, words and characters (like Unix <code>wc</code>).</p>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run>
+                import java.io.IOException;
+                import java.nio.file.Files;
+                import java.nio.file.Path;
+                import java.util.List;
+
+                public class Wc {
+                    public static void main(String[] args) throws IOException {
+                        Path p = Files.createTempFile("wc", ".txt");
+                        Files.writeString(p, "Java runs\non Android\n\nand everywhere else\n");
+                        List<String> lines = Files.readAllLines(p);
+                        long words = lines.stream().filter(l -> !l.isBlank()).mapToLong(l -> l.strip().split("\\s+").length).sum();
+                        long chars = Files.readString(p).length();
+                        System.out.println(lines.size() + " lines, " + words + " words, " + chars + " chars");
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output>
+                4 lines, 7 words, 42 chars
+              </script>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 2 — Next birthday <span class="badge blue">Medium</span></summary>
+            <div class="ex-body">
+              <p>Given a birth date and a fixed “today” (2026-03-14), compute the date of the next birthday and how many days remain. Handle birthdays already passed this year — and 29 February.</p>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run>
+                import java.time.LocalDate;
+                import java.time.MonthDay;
+                import java.time.temporal.ChronoUnit;
+
+                public class NextBirthday {
+                    static LocalDate next(LocalDate birth, LocalDate today) {
+                        MonthDay md = MonthDay.from(birth);
+                        LocalDate candidate = md.atYear(today.getYear());          // Feb 29 → Feb 28 in non-leap years
+                        return candidate.isBefore(today) ? md.atYear(today.getYear() + 1) : candidate;
+                    }
+
+                    public static void main(String[] args) {
+                        LocalDate today = LocalDate.of(2026, 3, 14);
+                        for (LocalDate b : new LocalDate[] {LocalDate.of(1990, 12, 10), LocalDate.of(2000, 1, 5), LocalDate.of(2004, 2, 29)}) {
+                            LocalDate n = next(b, today);
+                            System.out.println(b + " → " + n + " in " + ChronoUnit.DAYS.between(today, n) + " days");
+                        }
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output>
+                1990-12-10 → 2026-12-10 in 271 days
+                2000-01-05 → 2027-01-05 in 297 days
+                2004-02-29 → 2027-02-28 in 351 days
+              </script>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 3 — Weekly spending <span class="badge amber">Challenge</span></summary>
+            <div class="ex-body">
+              <p>From CSV lines <code>date,amount</code>, print the total per ISO week (Monday-based), in order, formatted like <code>Week of Mon 2 Mar: 12.30</code>.</p>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run>
+                import java.time.DayOfWeek;
+                import java.time.LocalDate;
+                import java.time.format.DateTimeFormatter;
+                import java.time.temporal.TemporalAdjusters;
+                import java.util.Locale;
+                import java.util.Map;
+                import java.util.TreeMap;
+
+                public class Weekly {
+                    public static void main(String[] args) {
+                        String csv = "2026-03-02,4.50\n2026-03-05,7.80\n2026-03-09,20.00\n2026-03-15,1.25\n2026-03-16,3.00";
+                        Map<LocalDate, Long> perWeek = new TreeMap<>();
+                        csv.lines().forEach(line -> {
+                            String[] f = line.split(",");
+                            LocalDate monday = LocalDate.parse(f[0]).with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+                            long cents = Math.round(Double.parseDouble(f[1]) * 100);
+                            perWeek.merge(monday, cents, Long::sum);
+                        });
+                        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("EEE d MMM", Locale.ENGLISH);
+                        perWeek.forEach((monday, cents) ->
+                                System.out.printf("Week of %s: %d.%02d%n", monday.format(fmt), cents / 100, cents % 100));
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output>
+                Week of Mon 2 Mar: 12.30
+                Week of Mon 9 Mar: 21.25
+                Week of Mon 16 Mar: 3.00
+              </script>
+            </div>
+          </details>
+        </section>
+
+        <section class="doc-section" id="quiz" data-title="Quiz">
+          <div class="sec-head"><h2><span class="sec-num">14.7</span>Quiz</h2></div>
+          <script type="application/json" data-quiz>
+          [
+            {"q": "Which type should store the moment an expense was synced to a server?", "options": ["`LocalDate`", "`LocalDateTime`", "`Instant`", "`String`"], "answer": 2, "explain": "An Instant is an unambiguous point on the UTC timeline. LocalDateTime has no zone, so it can't identify a moment."},
+            {"q": "Why pass `StandardCharsets.UTF_8` when reading text?", "options": ["It's faster", "Otherwise the platform default charset may decode bytes differently on another machine", "UTF-8 files are smaller", "It's required by try-with-resources"], "answer": 1, "explain": "Text is bytes + an encoding. Relying on defaults breaks non-ASCII characters across systems."},
+            {"q": "How do you read a 2 GB log file without running out of memory?", "options": ["`Files.readAllLines`", "`Files.readString`", "`BufferedReader.readLine()` in a loop (or `Files.lines` in try-with-resources)", "Load it into a StringBuilder"], "answer": 2, "explain": "Line-by-line processing keeps only one line in memory at a time."},
+            {"q": "`LocalDate.of(2026, 1, 31).plusMonths(1)` returns…", "options": ["2026-03-03", "2026-02-28", "An exception", "2026-02-31"], "answer": 1, "explain": "java.time clamps to the last valid day of the month rather than overflowing."},
+            {"q": "Where can an Android app write files without any permission?", "options": ["Anywhere on the SD card", "`/sdcard/Download`", "Its private `getFilesDir()` / `getCacheDir()`", "The system partition"], "answer": 2, "explain": "App-specific internal storage needs no permission and is removed on uninstall. Shared storage goes through MediaStore or the Storage Access Framework."}
+          ]
+          </script>
+        </section>
+
+        <section class="doc-section" id="references" data-title="Further reading">
+          <div class="sec-head"><h2><span class="sec-num">14.8</span>Further reading</h2></div>
+          <ul>
+            <li><a href="https://dev.java/learn/java-io/" target="_blank" rel="noopener">dev.java — Java I/O API</a></li>
+            <li><a href="https://dev.java/learn/date-time/" target="_blank" rel="noopener">dev.java — Date-Time API</a></li>
+            <li><a href="https://developer.android.com/training/data-storage" target="_blank" rel="noopener">Android — Data and file storage overview</a></li>
+          </ul>
+        </section>
+
+        <div id="pager"></div>
+      </div>
+    </main>
+  </div>
+  <div id="site-footer"></div>
+  <script src="assets/js/core.js?v=__BUILD__"></script>
+</body>
+</html>

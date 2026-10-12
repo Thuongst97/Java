@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lambdas, Method References &amp; Streams — Java Academy</title>
+  <meta name="description" content="Functional Java: lambdas, functional interfaces, java.util.function, method references, the Stream API, collectors and grouping.">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="assets/css/main.css?v=__BUILD__">
+  <script>try{var t=localStorage.getItem("ja-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body data-page="functional">
+  <div id="site-header"></div>
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+      <div class="content-inner">
+
+        <header class="page-hero">
+          <nav class="crumbs"><a href="index.html">Home</a><span>/</span><span>Core APIs &amp; Functional Java</span><span>/</span><span>Lesson 13</span></nav>
+          <div class="eyebrow">Lesson 13 · Core APIs &amp; Functional Java</div>
+          <h1>Lambdas, Method References &amp; Streams</h1>
+          <p class="lead">Since Java 8 you can pass behaviour around as values. Lambdas make click listeners and callbacks one-liners, and the Stream API turns loops full of bookkeeping into readable data pipelines.</p>
+          <div class="page-meta"><span>⏱ 65 min</span><span>🎯 Advanced</span><span>🧩 Prerequisite: lessons 11–12</span></div>
+          <div class="objectives">
+            <h4>You will be able to</h4>
+            <ul>
+              <li>Write lambdas for any functional interface</li>
+              <li>Use and compose <code>java.util.function</code> types</li>
+              <li>Replace lambdas with method references</li>
+              <li>Build stream pipelines: filter, map, sort, reduce</li>
+              <li>Group and summarise data with collectors</li>
+              <li>Know when a plain loop is better</li>
+            </ul>
+          </div>
+        </header>
+
+        <section class="doc-section" id="lambdas" data-title="Lambdas">
+          <div class="sec-head"><h2><span class="sec-num">13.1</span>Functional interfaces and lambdas</h2></div>
+          <p>A <b>functional interface</b> has exactly one abstract method — <code>Runnable</code>, <code>Comparator</code>, <code>View.OnClickListener</code>. A <b>lambda</b> is a compact implementation of that one method: <code>(parameters) -&gt; body</code>.</p>
+          <script type="text/plain" data-code="java" data-file="Lambdas.java" data-run>
+            import java.util.ArrayList;
+            import java.util.List;
+
+            public class Lambdas {
+                @FunctionalInterface                       // optional: the compiler verifies "exactly one abstract method"
+                interface PriceRule {
+                    long apply(long cents);
+                }
+
+                public static void main(String[] args) {
+                    PriceRule half = cents -> cents / 2;                 // one parameter: no parentheses needed
+                    PriceRule plusTax = (long cents) -> cents * 120 / 100; // explicit type
+                    PriceRule logged = cents -> {                         // block body needs return
+                        System.out.println("pricing " + cents);
+                        return cents;
+                    };
+                    System.out.println(half.apply(1000) + " " + plusTax.apply(1000) + " " + logged.apply(5));
+
+                    Runnable hello = () -> System.out.println("no parameters");
+                    hello.run();
+
+                    int bonus = 50;                                       // captured: must be effectively final
+                    PriceRule withBonus = cents -> cents + bonus;
+                    // bonus = 60;                                        // ✗ would make the capture illegal
+                    System.out.println(withBonus.apply(100));
+
+                    List<String> names = new ArrayList<>(List.of("Linus", "ada", "Grace"));
+                    names.sort((a, b) -> a.compareToIgnoreCase(b));       // a Comparator lambda
+                    System.out.println(names);
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            pricing 5
+            500 1200 5
+            no parameters
+            150
+            [ada, Grace, Linus]
+          </script>
+          <div class="callout java">
+            <div class="ci">👆</div>
+            <div><span class="ct">On Android</span>
+              <p>Every listener becomes a one-liner: <code>button.setOnClickListener(v -&gt; viewModel.save());</code> instead of a six-line anonymous class. Lambdas don't capture the outer <code>this</code> unless they use it, which helps avoid the leaks from lesson 09.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="function-types" data-title="java.util.function">
+          <div class="sec-head"><h2><span class="sec-num">13.2</span>The <code>java.util.function</code> toolbox</h2></div>
+          <div class="table-wrap">
+            <table class="t">
+              <thead><tr><th>Interface</th><th>Method</th><th>Shape</th><th>Example</th></tr></thead>
+              <tbody>
+                <tr><td><code>Function&lt;T, R&gt;</code></td><td><code>R apply(T)</code></td><td>T → R</td><td><code>String::length</code></td></tr>
+                <tr><td><code>Predicate&lt;T&gt;</code></td><td><code>boolean test(T)</code></td><td>T → boolean</td><td><code>s -&gt; s.isEmpty()</code></td></tr>
+                <tr><td><code>Consumer&lt;T&gt;</code></td><td><code>void accept(T)</code></td><td>T → ∅</td><td><code>System.out::println</code></td></tr>
+                <tr><td><code>Supplier&lt;T&gt;</code></td><td><code>T get()</code></td><td>∅ → T</td><td><code>ArrayList::new</code></td></tr>
+                <tr><td><code>UnaryOperator&lt;T&gt;</code></td><td><code>T apply(T)</code></td><td>T → T</td><td><code>String::trim</code></td></tr>
+                <tr><td><code>BiFunction&lt;T, U, R&gt;</code></td><td><code>R apply(T, U)</code></td><td>(T, U) → R</td><td><code>Math::max</code></td></tr>
+                <tr><td><code>IntPredicate</code>, <code>ToIntFunction&lt;T&gt;</code>…</td><td colspan="3">primitive specialisations that avoid boxing</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <script type="text/plain" data-code="java" data-file="Composing.java" data-run>
+            import java.util.function.Function;
+            import java.util.function.Predicate;
+            import java.util.function.Supplier;
+
+            public class Composing {
+                public static void main(String[] args) {
+                    Function<String, String> trim = String::strip;
+                    Function<String, Integer> length = String::length;
+                    Function<String, Integer> trimmedLength = trim.andThen(length);  // trim first, then length
+                    System.out.println(trimmedLength.apply("  hello  "));
+
+                    Predicate<String> isBlank = String::isBlank;
+                    Predicate<String> isLong = s -> s.length() > 5;
+                    Predicate<String> valid = isBlank.negate().and(isLong.negate());
+                    System.out.println(valid.test("Java") + " " + valid.test("") + " " + valid.test("Android"));
+
+                    Supplier<StringBuilder> fresh = StringBuilder::new;   // a factory
+                    System.out.println(fresh.get().append("built").append('!'));
+
+                    Function<Integer, Integer> doubleIt = x -> x * 2, inc = x -> x + 1;
+                    System.out.println(doubleIt.compose(inc).apply(5) + " " + doubleIt.andThen(inc).apply(5));
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            5
+            true false false
+            built!
+            12 11
+          </script>
+        </section>
+
+        <section class="doc-section" id="method-refs" data-title="Method references">
+          <div class="sec-head"><h2><span class="sec-num">13.3</span>Method references</h2></div>
+          <p>When a lambda only calls an existing method, a <b>method reference</b> <code>Class::method</code> says the same thing more clearly. There are four kinds:</p>
+          <div class="table-wrap">
+            <table class="t">
+              <thead><tr><th>Kind</th><th>Method reference</th><th>Equivalent lambda</th></tr></thead>
+              <tbody>
+                <tr><td>Static method</td><td><code>Integer::parseInt</code></td><td><code>s -&gt; Integer.parseInt(s)</code></td></tr>
+                <tr><td>Instance method of a particular object</td><td><code>System.out::println</code></td><td><code>x -&gt; System.out.println(x)</code></td></tr>
+                <tr><td>Instance method of an arbitrary object of a type</td><td><code>String::toUpperCase</code></td><td><code>s -&gt; s.toUpperCase()</code></td></tr>
+                <tr><td>Constructor</td><td><code>ArrayList::new</code></td><td><code>() -&gt; new ArrayList&lt;&gt;()</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="small muted">Android Studio offers “Replace lambda with method reference” via <kbd>Alt</kbd>+<kbd>Enter</kbd> whenever it's possible.</p>
+        </section>
+
+        <section class="doc-section" id="streams" data-title="Streams: the pipeline">
+          <div class="sec-head"><h2><span class="sec-num">13.4</span>Streams: source → operations → result</h2></div>
+          <p>A <b>stream</b> is a sequence of elements flowing through a pipeline. It has a <b>source</b> (a collection, array, range…), zero or more lazy <b>intermediate operations</b> (<code>filter</code>, <code>map</code>, <code>sorted</code>…) and one <b>terminal operation</b> (<code>toList</code>, <code>count</code>, <code>forEach</code>…) that triggers the work. Streams never modify their source.</p>
+          <div class="compare">
+            <div><div class="cmp-label c-orange">Loop</div>
+              <script type="text/plain" data-code="java" data-file="Loop.java">
+                List<String> result = new ArrayList<>();
+                for (Expense e : expenses) {
+                    if (e.cents() > 1000) {
+                        result.add(e.title().toUpperCase());
+                    }
+                }
+                Collections.sort(result);
+              </script>
+            </div>
+            <div><div class="cmp-label c-primary">Stream</div>
+              <script type="text/plain" data-code="java" data-file="Stream.java">
+                List<String> result = expenses.stream()
+                        .filter(e -> e.cents() > 1000)
+                        .map(e -> e.title().toUpperCase())
+                        .sorted()
+                        .toList();
+              </script>
+            </div>
+          </div>
+          <script type="text/plain" data-code="java" data-file="Lazy.java" data-run>
+            import java.util.List;
+
+            public class Lazy {
+                public static void main(String[] args) {
+                    List<String> result = List.of("one", "two", "three", "four", "five").stream()
+                            .filter(s -> { System.out.println("filter " + s); return s.length() > 3; })
+                            .map(s -> { System.out.println("map " + s); return s.toUpperCase(); })
+                            .limit(1)                                // short-circuits: stops early
+                            .toList();
+                    System.out.println(result);
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            filter one
+            filter two
+            filter three
+            map three
+            [THREE]
+          </script>
+          <p class="small muted">Elements flow one at a time through the whole pipeline, and only as many as needed: “four” and “five” are never even filtered.</p>
+        </section>
+
+        <section class="doc-section" id="operations" data-title="Common stream operations">
+          <div class="sec-head"><h2><span class="sec-num">13.5</span>Common operations</h2></div>
+          <script type="text/plain" data-code="java" data-file="StreamOps.java" data-run>
+            import java.util.Arrays;
+            import java.util.List;
+            import java.util.stream.IntStream;
+            import java.util.stream.Stream;
+
+            public class StreamOps {
+                record Expense(String title, long cents, String category) { }
+
+                public static void main(String[] args) {
+                    List<Expense> expenses = List.of(
+                            new Expense("Coffee", 350, "FOOD"), new Expense("Bus", 280, "TRANSPORT"),
+                            new Expense("Groceries", 4_210, "FOOD"), new Expense("Cinema", 1_200, "FUN"),
+                            new Expense("Taxi", 1_850, "TRANSPORT"));
+
+                    long total = expenses.stream().mapToLong(Expense::cents).sum();
+                    System.out.println("total " + total);
+
+                    System.out.println(expenses.stream().filter(e -> e.category().equals("FOOD")).count() + " food expenses");
+
+                    System.out.println(expenses.stream()
+                            .sorted((a, b) -> Long.compare(b.cents(), a.cents()))
+                            .limit(2).map(Expense::title).toList());
+
+                    System.out.println(expenses.stream().map(Expense::category).distinct().sorted().toList());
+                    System.out.println(expenses.stream().anyMatch(e -> e.cents() > 4_000) + " "
+                            + expenses.stream().allMatch(e -> e.cents() > 100));
+                    System.out.println(expenses.stream().filter(e -> e.title().startsWith("T")).findFirst().map(Expense::title).orElse("-"));
+
+                    System.out.println(IntStream.rangeClosed(1, 5).map(i -> i * i).sum());
+                    System.out.println(IntStream.of(3, 9, 4).average().orElse(0));
+                    System.out.println(Stream.of("a b", "c d e").flatMap(s -> Arrays.stream(s.split(" "))).toList());
+                    System.out.println(Stream.iterate(1, x -> x * 2).limit(8).toList());
+                    System.out.println(Stream.of(1, 2, 3, 4).reduce(0, Integer::sum));
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            total 7890
+            2 food expenses
+            [Groceries, Taxi]
+            [FOOD, FUN, TRANSPORT]
+            true true
+            Taxi
+            55
+            5.333333333333333
+            [a, b, c, d, e]
+            [1, 2, 4, 8, 16, 32, 64, 128]
+            10
+          </script>
+        </section>
+
+        <section class="doc-section" id="collectors" data-title="Collectors">
+          <div class="sec-head"><h2><span class="sec-num">13.6</span>Collectors: grouping and summarising</h2></div>
+          <p><code>collect(…)</code> with the factory methods in <code>Collectors</code> builds maps, strings and statistics. <code>groupingBy</code> is the stream version of SQL's <code>GROUP BY</code>:</p>
+          <script type="text/plain" data-code="java" data-file="Collecting.java" data-run>
+            import java.util.List;
+            import java.util.Map;
+            import java.util.TreeMap;
+            import java.util.stream.Collectors;
+
+            public class Collecting {
+                record Expense(String title, long cents, String category) { }
+
+                public static void main(String[] args) {
+                    List<Expense> expenses = List.of(
+                            new Expense("Coffee", 350, "FOOD"), new Expense("Bus", 280, "TRANSPORT"),
+                            new Expense("Groceries", 4_210, "FOOD"), new Expense("Cinema", 1_200, "FUN"),
+                            new Expense("Taxi", 1_850, "TRANSPORT"));
+
+                    System.out.println(expenses.stream().map(Expense::title).collect(Collectors.joining(", ", "[", "]")));
+
+                    Map<String, Long> totalByCategory = expenses.stream().collect(
+                            Collectors.groupingBy(Expense::category, TreeMap::new, Collectors.summingLong(Expense::cents)));
+                    System.out.println(totalByCategory);
+
+                    Map<String, Long> countByCategory = expenses.stream().collect(
+                            Collectors.groupingBy(Expense::category, TreeMap::new, Collectors.counting()));
+                    System.out.println(countByCategory);
+
+                    Map<String, List<String>> titlesByCategory = expenses.stream().collect(
+                            Collectors.groupingBy(Expense::category, TreeMap::new,
+                                    Collectors.mapping(Expense::title, Collectors.toList())));
+                    System.out.println(titlesByCategory);
+
+                    Map<Boolean, List<String>> bigOrSmall = expenses.stream().collect(
+                            Collectors.partitioningBy(e -> e.cents() >= 1_000,
+                                    Collectors.mapping(Expense::title, Collectors.toList())));
+                    System.out.println(bigOrSmall);
+
+                    Map<String, Long> byTitle = expenses.stream().collect(Collectors.toMap(Expense::title, Expense::cents));
+                    System.out.println(byTitle.get("Taxi"));
+
+                    var stats = expenses.stream().collect(Collectors.summarizingLong(Expense::cents));
+                    System.out.println(stats.getMin() + " / " + stats.getMax() + " / " + stats.getAverage());
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            [Coffee, Bus, Groceries, Cinema, Taxi]
+            {FOOD=4560, FUN=1200, TRANSPORT=2130}
+            {FOOD=2, FUN=1, TRANSPORT=2}
+            {FOOD=[Coffee, Groceries], FUN=[Cinema], TRANSPORT=[Bus, Taxi]}
+            {false=[Coffee, Bus], true=[Groceries, Cinema, Taxi]}
+            1850
+            280 / 4210 / 1578.0
+          </script>
+          <p class="small muted"><code>toMap</code> throws <code>IllegalStateException</code> on duplicate keys — pass a merge function as the third argument when keys may repeat: <code>toMap(k, v, Long::sum)</code>.</p>
+        </section>
+
+        <section class="doc-section" id="pitfalls" data-title="Pitfalls & good style">
+          <div class="sec-head"><h2><span class="sec-num">13.7</span>Pitfalls and good style</h2></div>
+          <ul class="checklist">
+            <li><b>No side effects in intermediate operations.</b> Don't add to an outside list inside <code>map</code> or <code>filter</code>; collect instead.</li>
+            <li><b>A stream can be consumed only once.</b> Reusing it throws <code>IllegalStateException: stream has already been operated upon or closed</code>. Keep the <em>collection</em> and call <code>.stream()</code> again.</li>
+            <li><b><code>Stream.toList()</code> (Java 16) returns an unmodifiable list</b>; use <code>collect(Collectors.toCollection(ArrayList::new))</code> if you need to mutate the result.</li>
+            <li><b>Don't use <code>parallel()</code> by reflex.</b> It helps only for large CPU-bound workloads; on a phone it mostly costs battery.</li>
+            <li><b>Loops are fine.</b> If a pipeline needs <code>peek</code>, indexes, early <code>return</code> or checked exceptions, a <code>for</code> loop is often clearer.</li>
+          </ul>
+          <div class="callout note">
+            <div class="ci">🤖</div>
+            <div><span class="ct">Streams on Android</span>
+              <p><code>java.util.stream</code> and <code>java.util.function</code> exist on Android 7.0 (API 24) and above; with <code>minSdk 26</code> (this course) you can use them freely. For even older devices, Android Gradle Plugin's <em>core library desugaring</em> backports them.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="exercises" data-title="Exercises">
+          <div class="sec-head"><h2><span class="sec-num">13.8</span>Exercises</h2></div>
+          <details class="exercise">
+            <summary>Exercise 1 — Clean names <span class="badge green">Easy</span></summary>
+            <div class="ex-body">
+              <p>From <code>List.of(" ada ", "", "Linus", "ada", "  grace")</code> produce the sorted, distinct, capitalised names: <code>[Ada, Grace, Linus]</code>.</p>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run>
+                import java.util.List;
+
+                public class CleanNames {
+                    public static void main(String[] args) {
+                        List<String> names = List.of(" ada ", "", "Linus", "ada", "  grace").stream()
+                                .map(String::strip)
+                                .filter(s -> !s.isEmpty())
+                                .map(s -> Character.toUpperCase(s.charAt(0)) + s.substring(1).toLowerCase())
+                                .distinct()
+                                .sorted()
+                                .toList();
+                        System.out.println(names);
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output>
+                [Ada, Grace, Linus]
+              </script>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 2 — Longest word per letter <span class="badge blue">Medium</span></summary>
+            <div class="ex-body">
+              <p>For a sentence, map each first letter to its longest word, sorted by letter. Hint: <code>groupingBy</code> with <code>Collectors.maxBy</code>, or <code>toMap</code> with a merge function.</p>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run>
+                import java.util.Arrays;
+                import java.util.Map;
+                import java.util.TreeMap;
+                import java.util.function.BinaryOperator;
+                import java.util.stream.Collectors;
+
+                public class Longest {
+                    public static void main(String[] args) {
+                        String text = "android apps are built with java and kotlin by brave builders";
+                        Map<Character, String> longest = Arrays.stream(text.split(" "))
+                                .collect(Collectors.toMap(
+                                        w -> w.charAt(0),
+                                        w -> w,
+                                        BinaryOperator.maxBy((a, b) -> Integer.compare(a.length(), b.length())),
+                                        TreeMap::new));
+                        System.out.println(longest);
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output>
+                {a=android, b=builders, j=java, k=kotlin, w=with}
+              </script>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 3 — Monthly report <span class="badge amber">Challenge</span></summary>
+            <div class="ex-body">
+              <p>Given expenses with a <code>YearMonth</code>, print for each month (in order) the total and the most expensive category. This is the core of Spendly's summary screen.</p>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run>
+                import java.time.YearMonth;
+                import java.util.List;
+                import java.util.Map;
+                import java.util.TreeMap;
+                import java.util.stream.Collectors;
+
+                public class Report {
+                    record Expense(YearMonth month, String category, long cents) { }
+
+                    public static void main(String[] args) {
+                        List<Expense> all = List.of(
+                                new Expense(YearMonth.of(2026, 1), "FOOD", 12_000), new Expense(YearMonth.of(2026, 1), "FUN", 4_500),
+                                new Expense(YearMonth.of(2026, 1), "FOOD", 3_000), new Expense(YearMonth.of(2026, 2), "TRANSPORT", 9_000),
+                                new Expense(YearMonth.of(2026, 2), "FOOD", 8_000));
+
+                        Map<YearMonth, List<Expense>> byMonth = all.stream()
+                                .collect(Collectors.groupingBy(Expense::month, TreeMap::new, Collectors.toList()));
+
+                        byMonth.forEach((month, list) -> {
+                            long total = list.stream().mapToLong(Expense::cents).sum();
+                            String top = list.stream()
+                                    .collect(Collectors.groupingBy(Expense::category, Collectors.summingLong(Expense::cents)))
+                                    .entrySet().stream()
+                                    .max(Map.Entry.comparingByValue())
+                                    .map(Map.Entry::getKey).orElse("-");
+                            System.out.printf("%s total %d.%02d, top %s%n", month, total / 100, total % 100, top);
+                        });
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output>
+                2026-01 total 195.00, top FOOD
+                2026-02 total 170.00, top TRANSPORT
+              </script>
+            </div>
+          </details>
+        </section>
+
+        <section class="doc-section" id="quiz" data-title="Quiz">
+          <div class="sec-head"><h2><span class="sec-num">13.9</span>Quiz</h2></div>
+          <script type="application/json" data-quiz>
+          [
+            {"q": "What makes an interface a *functional* interface?", "options": ["It is annotated with @FunctionalInterface", "It has exactly one abstract method", "All its methods are static", "It is in java.util.function"], "answer": 1, "explain": "One abstract method (default and static methods don't count). The annotation just asks the compiler to verify it."},
+            {"q": "When does this pipeline do any work?", "code": "Stream<String> s = names.stream()\n    .filter(n -> n.length() > 3)\n    .map(String::toUpperCase);", "options": ["Immediately", "When a terminal operation such as `toList()` is called", "When the list changes", "Never — it has an error"], "answer": 1, "explain": "Intermediate operations are lazy; nothing happens until a terminal operation pulls elements through."},
+            {"q": "Which method reference is equivalent to `s -> s.isBlank()`?", "options": ["`String::isBlank`", "`s::isBlank`", "`String.isBlank()`", "`this::isBlank`"], "answer": 0, "explain": "An instance method of an arbitrary object of a type: the first lambda parameter becomes the receiver."},
+            {"q": "Which collector produces `Map<String, Long>` of totals per category?", "options": ["`Collectors.toMap(Expense::category)`", "`Collectors.groupingBy(Expense::category, Collectors.summingLong(Expense::cents))`", "`Collectors.partitioningBy(Expense::category)`", "`Collectors.joining()`"], "answer": 1, "explain": "groupingBy classifies; the downstream collector summingLong reduces each group to a total."},
+            {"q": "Why can't a lambda modify a local variable it captures?", "options": ["Lambdas are always static", "Captured locals must be effectively final, so the lambda sees a stable copy", "It can, with the `var` keyword", "Locals are thread-local"], "answer": 1, "explain": "Lambdas may run later or on another thread; capturing a changing local would be ambiguous. Use a field, an AtomicInteger, or better, return a value."}
+          ]
+          </script>
+        </section>
+
+        <section class="doc-section" id="references" data-title="Further reading">
+          <div class="sec-head"><h2><span class="sec-num">13.10</span>Further reading</h2></div>
+          <ul>
+            <li><a href="https://dev.java/learn/lambdas/" target="_blank" rel="noopener">dev.java — Lambda expressions</a></li>
+            <li><a href="https://dev.java/learn/api/streams/" target="_blank" rel="noopener">dev.java — The Stream API</a></li>
+            <li><a href="https://developer.android.com/studio/write/java8-support" target="_blank" rel="noopener">Android — Java 8+ language features and APIs</a></li>
+          </ul>
+        </section>
+
+        <div id="pager"></div>
+      </div>
+    </main>
+  </div>
+  <div id="site-footer"></div>
+  <script src="assets/js/core.js?v=__BUILD__"></script>
+</body>
+</html>

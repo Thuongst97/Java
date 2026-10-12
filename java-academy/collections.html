@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Collections Framework — Java Academy</title>
+  <meta name="description" content="Java collections: List, Set, Map, Queue and Deque, choosing implementations, safe iteration, modern Map methods, Comparable and Comparator, immutable collections.">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <meta name="color-scheme" content="dark light">
+  <link rel="stylesheet" href="assets/css/main.css?v=__BUILD__">
+  <script>try{var t=localStorage.getItem("ja-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+</head>
+<body data-page="collections">
+  <div id="site-header"></div>
+  <div class="layout">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="content">
+      <div class="content-inner">
+
+        <header class="page-hero">
+          <nav class="crumbs"><a href="index.html">Home</a><span>/</span><span>Core APIs &amp; Functional Java</span><span>/</span><span>Lesson 12</span></nav>
+          <div class="eyebrow">Lesson 12 · Core APIs &amp; Functional Java</div>
+          <h1>The Collections Framework</h1>
+          <p class="lead">Lists, sets, maps and queues are the everyday data structures of Java. Learn what each interface promises, which implementation to pick, how to iterate and modify safely, and how to sort anything.</p>
+          <div class="page-meta"><span>⏱ 65 min</span><span>🎯 Intermediate</span><span>🧩 Prerequisite: lesson 11</span></div>
+          <div class="objectives">
+            <h4>You will be able to</h4>
+            <ul>
+              <li>Choose between List, Set, Map, Queue and Deque</li>
+              <li>Pick the right implementation for the job</li>
+              <li>Modify collections while iterating — safely</li>
+              <li>Use modern Map methods like <code>merge</code></li>
+              <li>Sort with <code>Comparable</code> and <code>Comparator</code></li>
+              <li>Use immutable collections and defensive copies</li>
+            </ul>
+          </div>
+        </header>
+
+        <section class="doc-section" id="overview" data-title="The big picture">
+          <div class="sec-head"><h2><span class="sec-num">12.1</span>The big picture</h2></div>
+          <div class="filetree"><span class="d">Iterable&lt;E&gt;</span>                  <span class="c"># anything usable in for-each</span>
+└── <span class="d">Collection&lt;E&gt;</span>
+    ├── <span class="d">List&lt;E&gt;</span>        ordered, indexed, duplicates OK     → ArrayList, LinkedList
+    ├── <span class="d">Set&lt;E&gt;</span>         no duplicates                     → HashSet, LinkedHashSet, TreeSet
+    └── <span class="d">Queue&lt;E&gt;</span>       processing order                  → ArrayDeque, PriorityQueue
+        └── <span class="d">Deque&lt;E&gt;</span>   both ends (stack + queue)         → ArrayDeque, LinkedList
+<span class="d">Map&lt;K, V&gt;</span>                     <span class="c"># key → value; NOT a Collection</span>  → HashMap, LinkedHashMap, TreeMap</div>
+          <div class="callout tip">
+            <div class="ci">🧩</div>
+            <div><span class="ct">Program to the interface</span>
+              <p>Declare variables, parameters and return types with the interface — <code>List&lt;Expense&gt; items = new ArrayList&lt;&gt;();</code> — so you can switch implementations without touching the rest of the code.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="lists" data-title="Lists">
+          <div class="sec-head"><h2><span class="sec-num">12.2</span>Lists</h2></div>
+          <script type="text/plain" data-code="java" data-file="Lists.java" data-run>
+            import java.util.ArrayList;
+            import java.util.Arrays;
+            import java.util.List;
+
+            public class Lists {
+                public static void main(String[] args) {
+                    List<String> tasks = new ArrayList<>();
+                    tasks.add("write code");
+                    tasks.add("test");
+                    tasks.add(0, "plan");                      // insert at index
+                    tasks.addAll(List.of("ship", "test"));
+                    System.out.println(tasks + " size=" + tasks.size());
+
+                    System.out.println(tasks.get(1) + " | index of test: " + tasks.indexOf("test")
+                            + " | last: " + tasks.lastIndexOf("test") + " | contains ship: " + tasks.contains("ship"));
+                    tasks.set(1, "write tests first");
+                    tasks.remove("test");                     // removes the FIRST match
+                    System.out.println(tasks);
+
+                    List<Integer> nums = new ArrayList<>(List.of(10, 20, 30));
+                    nums.remove(1);                           // remove(int index) → removes 20!
+                    nums.remove(Integer.valueOf(10));         // remove(Object) → removes 10
+                    System.out.println(nums);
+
+                    List<String> fixed = List.of("a", "b");   // immutable
+                    try { fixed.add("c"); } catch (UnsupportedOperationException e) { System.out.println("List.of is immutable"); }
+
+                    List<String> view = Arrays.asList("x", "y"); // fixed-size view of an array: set OK, add not
+                    view.set(0, "z");
+                    System.out.println(view + " " + tasks.subList(1, 3));
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            [plan, write code, test, ship, test] size=5
+            write code | index of test: 2 | last: 4 | contains ship: true
+            [plan, write tests first, ship, test]
+            [30]
+            List.of is immutable
+            [z, y] [write tests first, ship]
+          </script>
+          <p><b>ArrayList</b> is backed by an array: <code>get(i)</code> is instant, appending is fast, inserting/removing in the middle shifts elements. <b>LinkedList</b> rarely wins in practice — use <code>ArrayList</code> by default and <code>ArrayDeque</code> for queues.</p>
+        </section>
+
+        <section class="doc-section" id="iterating" data-title="Iterating & modifying">
+          <div class="sec-head"><h2><span class="sec-num">12.3</span>Iterating and modifying safely</h2></div>
+          <p>Changing a collection's structure while a for-each loop walks it throws <code>ConcurrentModificationException</code>. Use <code>removeIf</code>, an explicit <code>Iterator</code>, or build a new collection.</p>
+          <script type="text/plain" data-code="java" data-file="Iterating.java" data-run>
+            import java.util.ArrayList;
+            import java.util.Iterator;
+            import java.util.List;
+
+            public class Iterating {
+                public static void main(String[] args) {
+                    List<Integer> nums = new ArrayList<>(List.of(1, 2, 3, 4, 5, 6));
+                    try {
+                        for (Integer n : nums) {
+                            if (n % 2 == 0) nums.remove(n);   // ✗ structural change during for-each
+                        }
+                    } catch (java.util.ConcurrentModificationException e) {
+                        System.out.println("ConcurrentModificationException!");
+                    }
+
+                    nums = new ArrayList<>(List.of(1, 2, 3, 4, 5, 6));
+                    Iterator<Integer> it = nums.iterator();
+                    while (it.hasNext()) {
+                        if (it.next() % 2 == 0) it.remove();  // ✔ the iterator's own remove
+                    }
+                    System.out.println(nums);
+
+                    List<String> names = new ArrayList<>(List.of("ada", "", "linus", " "));
+                    names.removeIf(String::isBlank);          // ✔ simplest
+                    names.replaceAll(String::toUpperCase);
+                    names.forEach(n -> System.out.print(n + " "));
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            ConcurrentModificationException!
+            [1, 3, 5]
+            ADA LINUS
+          </script>
+        </section>
+
+        <section class="doc-section" id="sets" data-title="Sets">
+          <div class="sec-head"><h2><span class="sec-num">12.4</span>Sets</h2></div>
+          <p>A <code>Set</code> holds each element at most once (according to <code>equals</code>/<code>hashCode</code> — lesson 07!). The three implementations differ in <b>ordering</b>:</p>
+          <script type="text/plain" data-code="java" data-file="Sets.java" data-run>
+            import java.util.HashSet;
+            import java.util.LinkedHashSet;
+            import java.util.List;
+            import java.util.Set;
+            import java.util.TreeSet;
+
+            public class Sets {
+                public static void main(String[] args) {
+                    List<String> tags = List.of("java", "android", "kotlin", "java", "gradle", "android");
+                    System.out.println(new HashSet<>(tags).size() + " unique tags");    // order not guaranteed
+                    System.out.println(new LinkedHashSet<>(tags));                      // insertion order
+                    TreeSet<String> sorted = new TreeSet<>(tags);                       // sorted order
+                    System.out.println(sorted + " first=" + sorted.first() + " after j: " + sorted.ceiling("j"));
+
+                    Set<Integer> a = new TreeSet<>(List.of(1, 2, 3, 4));
+                    Set<Integer> b = Set.of(3, 4, 5);
+                    Set<Integer> union = new TreeSet<>(a);        union.addAll(b);
+                    Set<Integer> intersection = new TreeSet<>(a); intersection.retainAll(b);
+                    Set<Integer> difference = new TreeSet<>(a);   difference.removeAll(b);
+                    System.out.println(union + " " + intersection + " " + difference);
+                    System.out.println(a.add(2) + " " + a.add(9));   // add returns false for duplicates
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            4 unique tags
+            [java, android, kotlin, gradle]
+            [android, gradle, java, kotlin] first=android after j: java
+            [1, 2, 3, 4, 5] [3, 4] [1, 2]
+            false true
+          </script>
+        </section>
+
+        <section class="doc-section" id="maps" data-title="Maps">
+          <div class="sec-head"><h2><span class="sec-num">12.5</span>Maps</h2></div>
+          <p>A <code>Map&lt;K, V&gt;</code> associates unique keys with values. <code>HashMap</code> is the workhorse; <code>LinkedHashMap</code> keeps insertion order; <code>TreeMap</code> keeps keys sorted. Java 8 added methods that replace most “check then put” code:</p>
+          <script type="text/plain" data-code="java" data-file="Maps.java" data-run>
+            import java.util.ArrayList;
+            import java.util.HashMap;
+            import java.util.List;
+            import java.util.Map;
+            import java.util.TreeMap;
+
+            public class Maps {
+                public static void main(String[] args) {
+                    Map<String, Integer> stock = new HashMap<>();
+                    stock.put("apple", 5);
+                    stock.put("pear", 2);
+                    stock.put("apple", 7);                              // replaces the old value
+                    System.out.println(stock.get("apple") + " " + stock.get("kiwi") + " " + stock.getOrDefault("kiwi", 0));
+                    System.out.println(stock.containsKey("pear") + " " + stock.size());
+
+                    String text = "the cat and the hat and the bat";
+                    Map<String, Integer> counts = new TreeMap<>();
+                    for (String w : text.split(" ")) {
+                        counts.merge(w, 1, Integer::sum);               // insert 1 or add 1
+                    }
+                    System.out.println(counts);
+
+                    Map<Character, List<String>> byInitial = new TreeMap<>();
+                    for (String w : List.of("ant", "bee", "bat", "cow", "ape")) {
+                        byInitial.computeIfAbsent(w.charAt(0), k -> new ArrayList<>()).add(w);
+                    }
+                    System.out.println(byInitial);
+
+                    for (Map.Entry<String, Integer> e : counts.entrySet()) {   // iterate keys + values
+                        if (e.getValue() > 1) System.out.print(e.getKey() + "×" + e.getValue() + " ");
+                    }
+                    System.out.println();
+                    stock.putIfAbsent("kiwi", 9);
+                    stock.computeIfPresent("pear", (k, v) -> v - 1);
+                    stock.remove("apple");
+                    System.out.println(new TreeMap<>(stock));
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            7 null 0
+            true 2
+            {and=2, bat=1, cat=1, hat=1, the=3}
+            {a=[ant, ape], b=[bee, bat], c=[cow]}
+            and×2 the×3 
+            {kiwi=9, pear=1}
+          </script>
+          <div class="callout warn">
+            <div class="ci">🔑</div>
+            <div><span class="ct">Keys must be well-behaved</span>
+              <p>Hash-based maps and sets rely on <code>equals</code> and <code>hashCode</code>. Use immutable keys (Strings, numbers, enums, records). If you mutate an object after using it as a key, the map can no longer find it.</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="doc-section" id="queues" data-title="Queues & deques">
+          <div class="sec-head"><h2><span class="sec-num">12.6</span>Queues, deques and priority queues</h2></div>
+          <script type="text/plain" data-code="java" data-file="Queues.java" data-run>
+            import java.util.ArrayDeque;
+            import java.util.Comparator;
+            import java.util.Deque;
+            import java.util.PriorityQueue;
+            import java.util.Queue;
+
+            public class Queues {
+                record Job(String name, int priority) { }
+
+                public static void main(String[] args) {
+                    Queue<String> line = new ArrayDeque<>();      // FIFO: first in, first out
+                    line.offer("Ada"); line.offer("Ben"); line.offer("Cy");
+                    System.out.println(line.poll() + " served, next " + line.peek());
+
+                    Deque<String> history = new ArrayDeque<>();   // LIFO stack: use push/pop
+                    history.push("home"); history.push("settings"); history.push("about");
+                    System.out.println("back from " + history.pop() + " to " + history.peek());
+
+                    Queue<Job> jobs = new PriorityQueue<>(Comparator.comparingInt(Job::priority));
+                    jobs.add(new Job("sync", 3));
+                    jobs.add(new Job("crash report", 1));
+                    jobs.add(new Job("thumbnail", 2));
+                    while (!jobs.isEmpty()) System.out.print(jobs.poll().name() + " → ");
+                    System.out.println("done");
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            Ada served, next Ben
+            back from about to settings
+            crash report → thumbnail → sync → done
+          </script>
+          <p class="small muted">Don't use the legacy <code>Stack</code> and <code>Vector</code> classes — <code>ArrayDeque</code> is faster. <code>offer/poll/peek</code> return <code>false</code>/<code>null</code> on failure; <code>add/remove/element</code> throw.</p>
+        </section>
+
+        <section class="doc-section" id="sorting" data-title="Sorting">
+          <div class="sec-head"><h2><span class="sec-num">12.7</span>Sorting: <code>Comparable</code> and <code>Comparator</code></h2></div>
+          <p>A class that has a single <b>natural order</b> implements <code>Comparable&lt;T&gt;</code>. For any other order, pass a <code>Comparator</code> — and build it fluently with <code>Comparator.comparing</code>:</p>
+          <script type="text/plain" data-code="java" data-file="Sorting.java" data-run>
+            import java.util.ArrayList;
+            import java.util.Comparator;
+            import java.util.List;
+
+            public class Sorting {
+                record Version(int major, int minor) implements Comparable<Version> {
+                    @Override public int compareTo(Version o) {          // natural order
+                        int c = Integer.compare(major, o.major);         // never use a - b (overflow!)
+                        return c != 0 ? c : Integer.compare(minor, o.minor);
+                    }
+                    @Override public String toString() { return major + "." + minor; }
+                }
+
+                record Person(String name, int age, String city) { }
+
+                public static void main(String[] args) {
+                    List<Version> versions = new ArrayList<>(List.of(new Version(2, 1), new Version(1, 9), new Version(2, 0)));
+                    versions.sort(null);                                 // null = natural order
+                    System.out.println(versions);
+
+                    List<Person> people = new ArrayList<>(List.of(
+                            new Person("Ada", 36, "London"), new Person("Ben", 25, "Paris"),
+                            new Person("Cy", 36, "Berlin"), new Person("Dee", 25, null)));
+
+                    people.sort(Comparator.comparingInt(Person::age).thenComparing(Person::name));
+                    people.forEach(p -> System.out.print(p.name() + " "));
+                    System.out.println();
+
+                    people.sort(Comparator.comparing(Person::age).reversed());
+                    people.forEach(p -> System.out.print(p.name() + " "));
+                    System.out.println();
+
+                    people.sort(Comparator.comparing(Person::city, Comparator.nullsLast(Comparator.naturalOrder())));
+                    people.forEach(p -> System.out.print(p.city() + " "));
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            [1.9, 2.0, 2.1]
+            Ben Dee Ada Cy 
+            Ada Cy Ben Dee 
+            Berlin London Paris null
+          </script>
+          <p class="small muted">List sorting is <b>stable</b>: equal elements keep their previous relative order — that's why Ada stays before Cy after the reversed age sort.</p>
+        </section>
+
+        <section class="doc-section" id="immutable" data-title="Immutable collections & copies">
+          <div class="sec-head"><h2><span class="sec-num">12.8</span>Immutable collections and defensive copies</h2></div>
+          <script type="text/plain" data-code="java" data-file="Immutable.java" data-run>
+            import java.util.ArrayList;
+            import java.util.Collections;
+            import java.util.List;
+
+            public class Immutable {
+                static final class Playlist {
+                    private final List<String> songs;
+                    Playlist(List<String> songs) {
+                        this.songs = List.copyOf(songs);              // defensive, immutable copy
+                    }
+                    List<String> songs() { return songs; }            // safe to hand out
+                }
+
+                public static void main(String[] args) {
+                    List<String> input = new ArrayList<>(List.of("a", "b"));
+                    Playlist p = new Playlist(input);
+                    input.add("c");                                    // doesn't affect the playlist
+                    System.out.println(p.songs());
+
+                    List<String> view = Collections.unmodifiableList(input); // read-only VIEW
+                    input.add("d");
+                    System.out.println(view);                          // the view sees the change
+
+                    List<Integer> nums = new ArrayList<>(List.of(5, 3, 8));
+                    Collections.sort(nums);
+                    Collections.reverse(nums);
+                    System.out.println(nums + " max=" + Collections.max(nums) + " freq(3)=" + Collections.frequency(nums, 3));
+                }
+            }
+          </script>
+          <script type="text/plain" data-output>
+            [a, b]
+            [a, b, c, d]
+            [8, 5, 3] max=8 freq(3)=1
+          </script>
+          <p class="small muted"><code>List.of</code>, <code>Set.of</code>, <code>Map.of</code> and <code>copyOf</code> create truly immutable collections and reject <code>null</code> elements. <code>Collections.unmodifiableX</code> only wraps — the underlying collection can still change.</p>
+        </section>
+
+        <section class="doc-section" id="choosing" data-title="Choosing a collection">
+          <div class="sec-head"><h2><span class="sec-num">12.9</span>Choosing a collection</h2></div>
+          <div class="table-wrap">
+            <table class="t">
+              <thead><tr><th>Need</th><th>Use</th><th>get / contains</th><th>add</th><th>Order</th></tr></thead>
+              <tbody>
+                <tr><td>Ordered list, access by index</td><td><code>ArrayList</code></td><td>O(1) / O(n)</td><td>O(1)*</td><td>insertion</td></tr>
+                <tr><td>Uniqueness, fast lookup</td><td><code>HashSet</code></td><td>O(1)</td><td>O(1)</td><td>none</td></tr>
+                <tr><td>Uniqueness, keep order</td><td><code>LinkedHashSet</code></td><td>O(1)</td><td>O(1)</td><td>insertion</td></tr>
+                <tr><td>Sorted unique elements, ranges</td><td><code>TreeSet</code></td><td>O(log n)</td><td>O(log n)</td><td>sorted</td></tr>
+                <tr><td>Key → value lookup</td><td><code>HashMap</code></td><td>O(1)</td><td>O(1)</td><td>none</td></tr>
+                <tr><td>Sorted keys</td><td><code>TreeMap</code></td><td>O(log n)</td><td>O(log n)</td><td>sorted</td></tr>
+                <tr><td>Queue or stack</td><td><code>ArrayDeque</code></td><td>ends O(1)</td><td>O(1)</td><td>FIFO / LIFO</td></tr>
+                <tr><td>Always take the smallest</td><td><code>PriorityQueue</code></td><td>peek O(1)</td><td>O(log n)</td><td>by priority</td></tr>
+                <tr><td>Enum keys</td><td><code>EnumMap</code> / <code>EnumSet</code></td><td>O(1)</td><td>O(1)</td><td>declaration</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="small muted">* amortised. On Android, <code>androidx.collection</code> also offers memory-efficient <code>ArrayMap</code> and <code>SparseArray</code> for small maps and int keys.</p>
+        </section>
+
+        <section class="doc-section" id="exercises" data-title="Exercises">
+          <div class="sec-head"><h2><span class="sec-num">12.10</span>Exercises</h2></div>
+          <details class="exercise">
+            <summary>Exercise 1 — Remove duplicates, keep order <span class="badge green">Easy</span></summary>
+            <div class="ex-body">
+              <p>Given <code>List.of(3, 1, 3, 2, 1, 4)</code>, produce <code>[3, 1, 2, 4]</code> in one line.</p>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run>
+                import java.util.ArrayList;
+                import java.util.LinkedHashSet;
+                import java.util.List;
+
+                public class Dedupe {
+                    public static void main(String[] args) {
+                        List<Integer> unique = new ArrayList<>(new LinkedHashSet<>(List.of(3, 1, 3, 2, 1, 4)));
+                        System.out.println(unique);
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output>
+                [3, 1, 2, 4]
+              </script>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 2 — Top words <span class="badge blue">Medium</span></summary>
+            <div class="ex-body">
+              <p>Count word frequencies (case-insensitive) and print the three most frequent words, ties broken alphabetically.</p>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run>
+                import java.util.ArrayList;
+                import java.util.HashMap;
+                import java.util.List;
+                import java.util.Map;
+
+                public class TopWords {
+                    public static void main(String[] args) {
+                        String text = "To be or not to be that is the question to ask";
+                        Map<String, Integer> counts = new HashMap<>();
+                        for (String w : text.toLowerCase().split("\\s+")) counts.merge(w, 1, Integer::sum);
+
+                        List<Map.Entry<String, Integer>> entries = new ArrayList<>(counts.entrySet());
+                        entries.sort(Map.Entry.<String, Integer>comparingByValue().reversed()
+                                .thenComparing(Map.Entry.comparingByKey()));
+                        for (Map.Entry<String, Integer> e : entries.subList(0, 3)) {
+                            System.out.println(e.getKey() + " " + e.getValue());
+                        }
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output>
+                to 3
+                be 2
+                ask 1
+              </script>
+            </div>
+          </details>
+          <details class="exercise">
+            <summary>Exercise 3 — Balanced brackets <span class="badge amber">Challenge</span></summary>
+            <div class="ex-body">
+              <p>Using an <code>ArrayDeque</code> as a stack, check whether <code>()[]{}</code> brackets in a string are balanced.</p>
+              <script type="text/plain" data-code="java" data-file="Solution" data-run>
+                import java.util.ArrayDeque;
+                import java.util.Deque;
+                import java.util.Map;
+
+                public class Brackets {
+                    static final Map<Character, Character> PAIRS = Map.of(')', '(', ']', '[', '}', '{');
+
+                    static boolean balanced(String s) {
+                        Deque<Character> stack = new ArrayDeque<>();
+                        for (char c : s.toCharArray()) {
+                            if (PAIRS.containsValue(c)) stack.push(c);
+                            else if (PAIRS.containsKey(c)) {
+                                if (stack.isEmpty() || stack.pop() != PAIRS.get(c)) return false;
+                            }
+                        }
+                        return stack.isEmpty();
+                    }
+
+                    public static void main(String[] args) {
+                        for (String s : new String[] {"f(a[i]) { }", "(]", "((x)", "{[()()]}"}) {
+                            System.out.println(s + " → " + balanced(s));
+                        }
+                    }
+                }
+              </script>
+              <script type="text/plain" data-output>
+                f(a[i]) { } → true
+                (] → false
+                ((x) → false
+                {[()()]} → true
+              </script>
+            </div>
+          </details>
+        </section>
+
+        <section class="doc-section" id="quiz" data-title="Quiz">
+          <div class="sec-head"><h2><span class="sec-num">12.11</span>Quiz</h2></div>
+          <script type="application/json" data-quiz>
+          [
+            {"q": "`List<Integer> xs = new ArrayList<>(List.of(5, 6, 7)); xs.remove(1);` — what is `xs`?", "options": ["`[6, 7]`", "`[5, 7]`", "`[5, 6]`", "`[5, 6, 7]`"], "answer": 1, "explain": "With an int argument, `remove(int index)` is chosen: index 1 (the 6) is removed. Use `remove(Integer.valueOf(1))` to remove a value."},
+            {"q": "Which set keeps elements in insertion order?", "options": ["HashSet", "TreeSet", "LinkedHashSet", "EnumSet"], "answer": 2, "explain": "LinkedHashSet maintains a linked list through its entries; TreeSet sorts; HashSet has no defined order."},
+            {"q": "What does `map.merge(word, 1, Integer::sum)` do?", "options": ["Always puts 1", "Puts 1 if the key is absent, otherwise stores old + 1", "Throws if the key exists", "Merges two maps"], "answer": 1, "explain": "merge combines the existing value with the given one using the function, or inserts the given value when absent — perfect for counting."},
+            {"q": "How should you remove elements while looping over a list?", "options": ["`list.remove()` inside a for-each", "`removeIf` or `Iterator.remove()`", "It's impossible", "Catch ConcurrentModificationException"], "answer": 1, "explain": "Structural changes during for-each throw ConcurrentModificationException; removeIf and the iterator's remove are designed for it."},
+            {"q": "Which is the recommended stack implementation?", "options": ["`java.util.Stack`", "`ArrayDeque` with push/pop", "`LinkedList` only", "`Vector`"], "answer": 1, "explain": "Stack extends the synchronized legacy Vector. ArrayDeque is faster and the Javadoc recommends it."}
+          ]
+          </script>
+        </section>
+
+        <section class="doc-section" id="references" data-title="Further reading">
+          <div class="sec-head"><h2><span class="sec-num">12.12</span>Further reading</h2></div>
+          <ul>
+            <li><a href="https://dev.java/learn/api/collections-framework/" target="_blank" rel="noopener">dev.java — The Collections Framework</a></li>
+            <li><a href="https://docs.oracle.com/en/java/javase/21/core/creating-immutable-lists-sets-and-maps.html" target="_blank" rel="noopener">Creating immutable lists, sets and maps</a></li>
+            <li><a href="https://developer.android.com/reference/androidx/collection/package-summary" target="_blank" rel="noopener">androidx.collection</a></li>
+          </ul>
+        </section>
+
+        <div id="pager"></div>
+      </div>
+    </main>
+  </div>
+  <div id="site-footer"></div>
+  <script src="assets/js/core.js?v=__BUILD__"></script>
+</body>
+</html>
